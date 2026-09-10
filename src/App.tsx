@@ -1,126 +1,163 @@
 import { useState } from 'react';
-import { ToastProvider, useToast } from '@/components/common/Toast';
-import { Button } from '@/components/common/Button';
-import { Card } from '@/components/common/Card';
-import { Badge } from '@/components/common/Badge';
-import { Input } from '@/components/common/Input';
-import { Select } from '@/components/common/Select';
+import { Home } from '@/pages/Home';
+import { ToastProvider } from '@/components/common/Toast';
 import { Modal } from '@/components/common/Modal';
-import { Music, CheckCircle, Sparkles } from 'lucide-react';
+import { Button } from '@/components/common/Button';
+import { Booking } from '@/types';
+import { Sparkles } from 'lucide-react';
 
-function SetupShowcase() {
-  const toast = useToast();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [inputValue, setInputValue] = useState('');
+function AppContent() {
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [demoModalOpen, setDemoModalOpen] = useState<{
+    type: 'booking' | 'checkin' | 'admin';
+    prefill?: any;
+  } | null>(null);
+
+  const handleOpenBooking = (prefill?: any) => {
+    setDemoModalOpen({ type: 'booking', prefill });
+  };
+
+  const handleOpenCheckIn = () => {
+    setDemoModalOpen({ type: 'checkin' });
+  };
+
+  const handleOpenAdmin = () => {
+    setDemoModalOpen({ type: 'admin' });
+  };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      {/* Header */}
-      <header className="flex items-center justify-between py-6 border-b border-slate-200 mb-8">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-white shadow-md">
-            <Music className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="text-xs text-secondary font-bold tracking-wider uppercase">
-              วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก
-            </div>
-            <h1 className="text-xl font-bold text-primary">ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.</h1>
-          </div>
-        </div>
-        <Badge variant="gold" size="md">
-          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-          Frontend Setup สำเร็จ
-        </Badge>
-      </header>
+    <>
+      {/* Main Home Page */}
+      <Home
+        onOpenBookingModal={handleOpenBooking}
+        onOpenCheckInOutModal={handleOpenCheckIn}
+        onOpenAdminLogin={handleOpenAdmin}
+        onSelectBookingDetail={(booking) => setSelectedBooking(booking)}
+      />
 
-      {/* Design System Preview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Card>
-          <h2 className="text-base font-bold text-primary mb-3">🎨 Design Tokens & Components</h2>
-          <p className="text-xs text-slate-500 mb-4">
-            ตรวจสอบสีสัน ฟอนต์ภาษาไทย (IBM Plex Sans Thai / Sarabun) และคอมโพเนนต์พื้นฐาน
-          </p>
-
-          <div className="flex flex-wrap gap-2 mb-4">
-            <Button size="sm" variant="primary" onClick={() => toast.success('ทดสอบสำเร็จ', 'ปุ่ม Primary ทำงานเรียบร้อย')}>
-              Primary Button
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => toast.info('แจ้งเตือน', 'ปุ่ม Secondary ทำงานเรียบร้อย')}>
-              Secondary
-            </Button>
-            <Button size="sm" variant="gold" onClick={() => toast.success('พิเศษ', 'ปุ่ม Gold เด่นชัด')}>
-              Gold Highlight
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setModalOpen(true)}>
-              เปิด Modal
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
-            <Badge variant="primary">Primary</Badge>
-            <Badge variant="secondary">Secondary</Badge>
-            <Badge variant="gold">Gold</Badge>
-            <Badge variant="success">ว่าง (Available)</Badge>
-            <Badge variant="warning">ใกล้ถึงเวลา</Badge>
-            <Badge variant="danger">จองแล้ว</Badge>
-          </div>
-        </Card>
-
-        <Card>
-          <h2 className="text-base font-bold text-primary mb-3">📝 Form Elements</h2>
-          <div className="space-y-3">
-            <Input
-              label="ชื่อ-นามสกุลจริง"
-              placeholder="เช่น นายสมชาย ใจดี"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              required
-            />
-            <Select
-              label="ชั้นปี"
-              options={[
-                { value: 'ปี 1', label: 'ชั้นปีที่ 1' },
-                { value: 'ปี 2', label: 'ชั้นปีที่ 2' },
-                { value: 'ปี 3', label: 'ชั้นปีที่ 3' },
-                { value: 'ปี 4', label: 'ชั้นปีที่ 4' },
-                { value: 'บุคลากร', label: 'อาจารย์ / บุคลากร' },
-              ]}
-            />
-          </div>
-        </Card>
-      </div>
-
-      {/* Modal Demonstration */}
+      {/* Booking Detail Modal (เมื่อคลิกที่บล็อกการจองบน Timeline) */}
       <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title="ทดสอบคอมโพเนนต์ Modal"
-        description="ระบบ Dialog Modal พร้อม Animate และ Backdrop Blur"
+        isOpen={!!selectedBooking}
+        onClose={() => setSelectedBooking(null)}
+        title="รายละเอียดการจองห้องซ้อม"
+        description="ข้อมูลคิวการใช้งานห้องซ้อมดนตรี วทก."
       >
-        <div className="text-sm text-slate-600 space-y-3">
-          <p>
-            พร้อมสำหรับเข้าสู่ <strong>PHASE 6: หน้าหลัก (Public Dashboard & Timeline Grid)</strong> ในสเต็ปถัดไป
-          </p>
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-2.5 text-xs text-slate-700">
-            <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <span>เชื่อมต่อ API Client เข้ากับ Google Apps Script เรียบร้อยแล้ว</span>
+        {selectedBooking && (
+          <div className="space-y-4">
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5 text-xs">
+              <div className="flex justify-between border-b border-slate-200 pb-2">
+                <span className="text-slate-500">รหัสจอง:</span>
+                <span className="font-bold text-primary font-mono text-sm">
+                  {selectedBooking.booking_code}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">ห้องซ้อม:</span>
+                <span className="font-semibold text-slate-800">{selectedBooking.room_id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">วันที่:</span>
+                <span className="font-semibold text-slate-800">{selectedBooking.booking_date}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">เวลา:</span>
+                <span className="font-bold text-primary">
+                  {selectedBooking.start_time} - {selectedBooking.end_time} น.
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">ผู้จอง:</span>
+                <span className="font-semibold text-slate-800">
+                  {selectedBooking.full_name} ({selectedBooking.student_year})
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">สาขาวิชา:</span>
+                <span className="font-semibold text-slate-800">{selectedBooking.major}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">วัตถุประสงค์:</span>
+                <span className="text-slate-700">{selectedBooking.purpose}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">จำนวนสมาชิก:</span>
+                <span className="text-slate-700">{selectedBooking.party_size} คน</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button size="sm" variant="outline" onClick={() => setSelectedBooking(null)}>
+                ปิดหน้าต่าง
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="mt-5 flex justify-end">
-          <Button size="sm" variant="primary" onClick={() => setModalOpen(false)}>
-            เข้าใจแล้ว
-          </Button>
+        )}
+      </Modal>
+
+      {/* Placeholder Modal for Modal Flow in Phase 7/8 */}
+      <Modal
+        isOpen={!!demoModalOpen}
+        onClose={() => setDemoModalOpen(null)}
+        title={
+          demoModalOpen?.type === 'booking'
+            ? 'ระบบจองห้องซ้อมดนตรี (Phase 7)'
+            : demoModalOpen?.type === 'checkin'
+            ? 'เช็คอิน / เช็คเอาต์ห้องซ้อม (Phase 7)'
+            : 'เข้าสู่ระบบผู้ดูแล (Admin Console - Phase 8)'
+        }
+        description="เตรียมพร้อมสำหรับเฟสถัดไป"
+      >
+        <div className="space-y-4 py-2">
+          {demoModalOpen?.type === 'booking' && (
+            <div className="text-xs text-slate-600 space-y-2">
+              <p>
+                คุณได้เลือกช่วงเวลา: <strong>{demoModalOpen.prefill?.startTime || '08:00'} - {demoModalOpen.prefill?.endTime || '09:00'} น.</strong>
+              </p>
+              <p>
+                ห้อง: <strong>{demoModalOpen.prefill?.roomId || 'ห้องซ้อมรวม A'}</strong> วันที่: <strong>{demoModalOpen.prefill?.date}</strong>
+              </p>
+              <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-850 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-secondary flex-shrink-0" />
+                <span>ฟอร์มจองแบบ Stepper 3 ขั้นตอนเต็มรูปแบบจะถูกเปิดใช้งานใน <strong>PHASE 7</strong></span>
+              </div>
+            </div>
+          )}
+
+          {demoModalOpen?.type === 'checkin' && (
+            <div className="text-xs text-slate-600 space-y-2">
+              <p>ระบบค้นหาด้วยรหัสจอง (เช่น MB-2609-XXXX) พร้อมปุ่มเช็คอินสด เช็คเอาต์ และนับเวลาจริง</p>
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-850 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>โมดอลเช็คอิน/เช็คเอาต์/ยกเลิก จะถูกเปิดใช้งานใน <strong>PHASE 7</strong></span>
+              </div>
+            </div>
+          )}
+
+          {demoModalOpen?.type === 'admin' && (
+            <div className="text-xs text-slate-600 space-y-2">
+              <p>ระบบหลังบ้านพร้อมแดชบอร์ดกราฟ KPI, สถิติ Heatmap และจัดการผู้รับอีเมล</p>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-850 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+                <span>หน้า Admin Console เต็มรูปแบบจะถูกเชื่อมต่อใน <strong>PHASE 8</strong></span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <Button size="sm" variant="primary" onClick={() => setDemoModalOpen(null)}>
+              รับทราบ
+            </Button>
+          </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }
 
 export function App() {
   return (
     <ToastProvider>
-      <SetupShowcase />
+      <AppContent />
     </ToastProvider>
   );
 }

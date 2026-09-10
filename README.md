@@ -16,7 +16,7 @@
 - [x] **PHASE 3:** Backend Admin + Auth (`06_Auth.gs`, `07_AdminService.gs`)
 - [x] **PHASE 4:** ระบบอีเมล + Trigger อัตโนมัติ (`08_Mailer.gs`, `09_Triggers.gs`)
 - [x] **PHASE 5:** Frontend Setup + Design System (Vite + React + TS + Tailwind + shadcn/ui)
-- [ ] **PHASE 6:** หน้าหลัก (Public Dashboard & Timeline Grid)
+- [x] **PHASE 6:** หน้าหลัก (Public Dashboard & Timeline Grid)
 - [ ] **PHASE 7:** Flow การจอง + เช็คอิน/เช็คเอาต์
 - [ ] **PHASE 8:** หลังบ้านแอดมิน (Admin Console)
 - [ ] **PHASE 9:** คุณภาพ ความปลอดภัย และการเข้าถึง
