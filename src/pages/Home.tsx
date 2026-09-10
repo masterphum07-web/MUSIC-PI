@@ -13,7 +13,7 @@ import dayjs from 'dayjs';
 
 export interface HomeProps {
   onOpenBookingModal: (prefill?: { roomId?: string; date?: string; startTime?: string; endTime?: string }) => void;
-  onOpenCheckInOutModal: () => void;
+  onOpenCheckInOutModal: (tab?: 'checkin' | 'checkout' | 'lookup', code?: string) => void;
   onOpenAdminLogin: () => void;
   onSelectBookingDetail: (booking: Booking) => void;
   refreshTrigger?: number;
@@ -206,6 +206,37 @@ export const Home: React.FC<HomeProps> = ({
               </button>
             </div>
           )}
+
+          {/* Quick Check-in / Check-out Action Banner */}
+          <div className="bg-gradient-to-r from-emerald-50 via-teal-50/60 to-amber-50 border border-emerald-200/80 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-3 text-center sm:text-left">
+              <div className="w-10 h-10 rounded-xl bg-white border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-sm flex-shrink-0">
+                <Music className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs sm:text-sm font-bold text-slate-800">
+                  มีคิวจองแล้วใช่ไหม? เช็คอินและคืนห้องง่ายๆ ใน 1 คลิก
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  กรอกเพียงรหัสจอง (เช่น MB-2609-XXXX) หรือสแกน QR Code ไม่ต้องพิมพ์ชื่อ-นามสกุลซ้ำ
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => onOpenCheckInOutModal('checkin')}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-xl shadow-sm transition-all"
+              >
+                <span>🟢 เช็คอินเข้าห้อง</span>
+              </button>
+              <button
+                onClick={() => onOpenCheckInOutModal('checkout')}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 active:scale-95 border border-amber-300 rounded-xl shadow-sm transition-all"
+              >
+                <span>🚪 คืนห้องซ้อม</span>
+              </button>
+            </div>
+          </div>
 
           {/* Data Loaded Successfully */}
           {state && (() => {

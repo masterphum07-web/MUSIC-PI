@@ -493,21 +493,24 @@ function getPublicState(targetDate) {
  */
 function lookupBooking(bookingCode, fullName) {
   var code = String(bookingCode || "").trim().toUpperCase();
-  var name = String(fullName || "").trim();
+  var name = fullName ? String(fullName).trim() : "";
 
-  if (!code || !name) {
-    throw new Error("กรุณากรอกรหัสการจองและชื่อ-นามสกุลให้ครบถ้วน");
+  if (!code) {
+    throw new Error("กรุณากรอกรหัสการจอง");
   }
 
   var row = findRowById("Bookings", "booking_code", code);
   if (!row) {
-    throw new Error("ไม่พบข้อมูลการจองที่ตรงกับรหัสนี้");
+    throw new Error("ไม่พบข้อมูลการจองที่ตรงกับรหัส " + code);
   }
 
-  var rowName = String(row.full_name || "").trim().toLowerCase();
-  var inputName = name.toLowerCase();
-  if (rowName !== inputName && rowName.indexOf(inputName) === -1 && inputName.indexOf(rowName) === -1) {
-    throw new Error("ชื่อ-นามสกุลไม่ตรงกับรหัสการจองนี้");
+  // หากระบุชื่อมาด้วย ให้ตรวจสอบความถูกต้อง
+  if (name) {
+    var rowName = String(row.full_name || "").trim().toLowerCase();
+    var inputName = name.toLowerCase();
+    if (rowName !== inputName && rowName.indexOf(inputName) === -1 && inputName.indexOf(rowName) === -1) {
+      throw new Error("ชื่อ-นามสกุลไม่ตรงกับรหัสการจองนี้");
+    }
   }
 
   return {

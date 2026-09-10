@@ -39,9 +39,26 @@ function AppContent() {
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [newBooking, setNewBooking] = useState<Booking | null>(null);
   const [isCheckInOutOpen, setIsCheckInOutOpen] = useState(false);
+  const [checkInOutTab, setCheckInOutTab] = useState<'checkin' | 'checkout' | 'lookup'>('checkin');
+  const [initialBookingCode, setInitialBookingCode] = useState<string>('');
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [publicState, setPublicState] = useState<PublicState | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // ตรวจจับ URL Query Parameters เช่น ?action=checkin&code=MB-2609-MZMN จากการสแกน QR Code หรือปุ่มในอีเมล
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      const action = url.searchParams.get('action');
+      const code = url.searchParams.get('code');
+      if (action === 'checkin' || action === 'checkout' || code) {
+        if (code) setInitialBookingCode(code.toUpperCase());
+        if (action === 'checkout') setCheckInOutTab('checkout');
+        else setCheckInOutTab('checkin');
+        setIsCheckInOutOpen(true);
+      }
+    } catch (e) {}
+  }, []);
 
   // ตรวจสอบ URL Hash เช่น #admin เพื่อเปิดหน้าแอดมินโดยตรง
   useEffect(() => {
@@ -71,15 +88,17 @@ function AppContent() {
     setIsBookingOpen(true);
   };
 
+  const handleOpenCheckIn = (tab: 'checkin' | 'checkout' | 'lookup' = 'checkin', code?: string) => {
+    setCheckInOutTab(tab);
+    if (code) setInitialBookingCode(code);
+    setIsCheckInOutOpen(true);
+  };
+
   const handleBookingSuccess = (createdBooking: Booking) => {
     setIsBookingOpen(false);
     setNewBooking(createdBooking);
     setIsSuccessOpen(true);
     setRefreshTrigger((prev) => prev + 1);
-  };
-
-  const handleOpenCheckIn = () => {
-    setIsCheckInOutOpen(true);
   };
 
   const handleBookingUpdated = (_updatedBooking: Booking) => {
@@ -161,14 +180,20 @@ function AppContent() {
         isOpen={isSuccessOpen}
         onClose={() => setIsSuccessOpen(false)}
         booking={newBooking}
+        onOpenCheckIn={(code) => handleOpenCheckIn('checkin', code)}
       />
 
       {/* 3. Modal เช็คอิน / เช็คเอาต์ / ยกเลิกคิว (Phase 7) */}
       <CheckInOutModal
         isOpen={isCheckInOutOpen}
-        onClose={() => setIsCheckInOutOpen(false)}
+        onClose={() => {
+          setIsCheckInOutOpen(false);
+          setInitialBookingCode('');
+        }}
         onBookingUpdated={handleBookingUpdated}
         bookings={publicState?.bookings || []}
+        initialTab={checkInOutTab}
+        initialBookingCode={initialBookingCode}
       />
 
       {/* 4. Modal เข้าสู่ระบบผู้ดูแล Admin Login (Phase 8) */}

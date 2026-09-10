@@ -2,8 +2,8 @@
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก. (WTK Music Studio Reservation)
  * ไฟล์รวมสมบูรณ์ (All-In-One Code.gs) สำหรับใส่ใน Google Apps Script แผ่นเดียวจบ
- * อัปเดต: ระบบแคชความเร็วสูง (High-Performance Request Cache), ปลด LockService ทันที,
- *         และแก้ไขเวลาและระบบค้นหาคิวเช็คอินให้ตอบสนองรวดเร็ว 0ms
+ * อัปเดต: ระบบเช็คอิน-เช็คเอาต์แยกแท็บด้วยรหัสจองเพียงอย่างเดียว (Code-only Checkin),
+ *         ปุ่ม 1-Tap Checkin/Checkout ในอีเมล, และ QR Code Deep-Linking สแกนแล้วเช็คอินได้ทันที
  * ==============================================================================
  */
 
@@ -1722,21 +1722,24 @@ function getPublicState(targetDate) {
  */
 function lookupBooking(bookingCode, fullName) {
   var code = String(bookingCode || "").trim().toUpperCase();
-  var name = String(fullName || "").trim();
+  var name = fullName ? String(fullName).trim() : "";
 
-  if (!code || !name) {
-    throw new Error("กรุณากรอกรหัสการจองและชื่อ-นามสกุลให้ครบถ้วน");
+  if (!code) {
+    throw new Error("กรุณากรอกรหัสการจอง");
   }
 
   var row = findRowById("Bookings", "booking_code", code);
   if (!row) {
-    throw new Error("ไม่พบข้อมูลการจองที่ตรงกับรหัสนี้");
+    throw new Error("ไม่พบข้อมูลการจองที่ตรงกับรหัส " + code);
   }
 
-  var rowName = String(row.full_name || "").trim().toLowerCase();
-  var inputName = name.toLowerCase();
-  if (rowName !== inputName && rowName.indexOf(inputName) === -1 && inputName.indexOf(rowName) === -1) {
-    throw new Error("ชื่อ-นามสกุลไม่ตรงกับรหัสการจองนี้");
+  // หากระบุชื่อมาด้วย ให้ตรวจสอบความถูกต้อง
+  if (name) {
+    var rowName = String(row.full_name || "").trim().toLowerCase();
+    var inputName = name.toLowerCase();
+    if (rowName !== inputName && rowName.indexOf(inputName) === -1 && inputName.indexOf(rowName) === -1) {
+      throw new Error("ชื่อ-นามสกุลไม่ตรงกับรหัสการจองนี้");
+    }
   }
 
   return {
@@ -2538,8 +2541,8 @@ function adminListBookings(query) {
       booking_code: b.booking_code,
       room_id: b.room_id,
       booking_date: bDateStr,
-      start_time: b.start_time,
-      end_time: b.end_time,
+      start_time: formatTimeToHHmm(b.start_time),
+      end_time: formatTimeToHHmm(b.end_time),
       full_name: b.full_name,
       student_year: b.student_year,
       major: b.major,
@@ -3105,15 +3108,29 @@ function sendBookingConfirmationToUser(booking) {
   var userEmail = String(booking.email || "").trim();
   if (!userEmail) return;
 
-  var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" + encodeURIComponent(booking.booking_code);
+  var webBaseUrl = "https://masterphum07-web.github.io/MUSIC-PI/";
+  var checkInUrl = webBaseUrl + "?action=checkin&code=" + encodeURIComponent(booking.booking_code);
+  var checkOutUrl = webBaseUrl + "?action=checkout&code=" + encodeURIComponent(booking.booking_code);
+  var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" + encodeURIComponent(checkInUrl);
 
   var content = '<h3 style="margin-top: 0; color: #0F3D5C;">ยินดีด้วย! การจองห้องซ้อมสำเร็จแล้ว</h3>' +
-    '<p>สวัสดีคุณ <strong>' + booking.full_name + '</strong> ระบบได้บันทึกการจองห้องซ้อมดนตรีของคุณเรียบร้อยแล้ว กรุณาเก็บรหัสนี้ไว้เพื่อใช้เช็คอินหน้าห้องซ้อม:</p>' +
+    '<p>สวัสดีคุณ <strong>' + booking.full_name + '</strong> ระบบได้บันทึกการจองห้องซ้อมดนตรีของคุณเรียบร้อยแล้ว คุณสามารถใช้ปุ่มลัดด้านล่างหรือสแกน QR Code เพื่อเช็คอินเข้าใช้งานได้ทันที:</p>' +
+    
+    // Quick Action Buttons Container
+    '<div style="text-align: center; margin: 20px 0;">' +
+      '<a href="' + checkInUrl + '" target="_blank" style="display: inline-block; background-color: #16A34A; color: #FFFFFF; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: bold; font-size: 14px; margin: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">' +
+        '🟢 กดเพื่อยืนยันเช็คอินทันที' +
+      '</a>' +
+      '<a href="' + checkOutUrl + '" target="_blank" style="display: inline-block; background-color: #0F3D5C; color: #FFFFFF; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: bold; font-size: 14px; margin: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">' +
+        '🚪 กดเพื่อยืนยันเช็คเอาต์คืนห้อง' +
+      '</a>' +
+    '</div>' +
+
     '<div style="text-align: center; margin: 24px 0; padding: 20px; background-color: #F1F5F9; border-radius: 12px; border: 2px dashed #CBD5E1;">' +
       '<div style="font-size: 13px; color: #64748B; margin-bottom: 6px;">รหัสการจองของคุณ (Booking Code)</div>' +
       '<div style="font-size: 28px; font-weight: 800; color: #0F3D5C; letter-spacing: 3px; font-family: monospace;">' + booking.booking_code + '</div>' +
-      '<div style="margin-top: 15px;"><img src="' + qrUrl + '" alt="QR Code" width="160" height="160" style="display: block; margin: 0 auto; border-radius: 8px; border: 1px solid #E2E8F0;"></div>' +
-      '<div style="font-size: 12px; color: #64748B; margin-top: 8px;">สแกนหรือแสดงรหัสนี้ตอนเช็คอินหน้าห้องซ้อม</div>' +
+      '<div style="margin-top: 15px;"><img src="' + qrUrl + '" alt="QR Code สแกนเช็คอิน" width="160" height="160" style="display: block; margin: 0 auto; border-radius: 8px; border: 1px solid #E2E8F0;"></div>' +
+      '<div style="font-size: 12px; color: #64748B; margin-top: 8px;">ใช้กล้องมือถือสแกน QR Code นี้เพื่อเปิดหน้ายืนยันเช็คอินในคลิกเดียว</div>' +
     '</div>' +
     '<table style="width: 100%; border-collapse: collapse; margin: 16px 0;">' +
       '<tr><td style="padding: 6px 0; color: #64748B;">ห้องซ้อม:</td><td style="padding: 6px 0; font-weight: bold;">' + booking.room_id + '</td></tr>' +

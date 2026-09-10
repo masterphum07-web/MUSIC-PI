@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
 import { Booking } from '@/types';
-import { Copy, Check, Calendar, AlertTriangle, Sparkles } from 'lucide-react';
+import { Copy, Check, Calendar, AlertTriangle, Sparkles, LogIn } from 'lucide-react';
 import { formatThaiDate } from '@/lib/utils';
 import dayjs from 'dayjs';
 
@@ -10,12 +10,14 @@ export interface BookingSuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   booking: Booking | null;
+  onOpenCheckIn?: (code: string) => void;
 }
 
 export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
   isOpen,
   onClose,
   booking,
+  onOpenCheckIn,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -27,20 +29,26 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
     setTimeout(() => setCopied(false), 2500);
   };
 
+  // ลิงก์ตรงสำหรับเช็คอินทันที (1-Tap Deep Link)
+  const checkInUrl = `https://masterphum07-web.github.io/MUSIC-PI/?action=checkin&code=${encodeURIComponent(
+    booking.booking_code
+  )}`;
+
   // ลิงก์เพิ่มลง Google Calendar
   const getGoogleCalendarUrl = () => {
     const startDate = dayjs(`${booking.booking_date}T${booking.start_time}:00`).format('YYYYMMDDTHHmmss');
     const endDate = dayjs(`${booking.booking_date}T${booking.end_time}:00`).format('YYYYMMDDTHHmmss');
     const title = encodeURIComponent('ซ้อมดนตรี ชมรมดนตรี วทก.');
     const details = encodeURIComponent(
-      `รหัสการจอง: ${booking.booking_code}\nผู้จอง: ${booking.full_name}\nห้อง: ${booking.room_id}\nกรุณาเช็คอินหน้าห้องซ้อมก่อนเวลา 15 นาที`
+      `รหัสการจอง: ${booking.booking_code}\nผู้จอง: ${booking.full_name}\nห้อง: ${booking.room_id}\nลิงก์เช็คอิน: ${checkInUrl}\nกรุณาเช็คอินหน้าห้องซ้อมก่อนเวลา 15 นาที`
     );
     const location = encodeURIComponent('ห้องซ้อมดนตรี ชั้น 2 อาคารกิจกรรมนักศึกษา วทก.');
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${details}&location=${location}`;
   };
 
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(
-    booking.booking_code
+  // สร้าง QR Code ที่สแกนแล้วเปิดหน้าเว็บพร้อมกรอกรหัสและเปิดหน้าเช็คอินทันที
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=10&data=${encodeURIComponent(
+    checkInUrl
   )}`;
 
   return (
@@ -99,22 +107,42 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
               <Calendar className="w-3.5 h-3.5 text-blue-600" />
               <span>ลง Google Calendar</span>
             </a>
+
+            {onOpenCheckIn && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  onClose();
+                  onOpenCheckIn(booking.booking_code);
+                }}
+                className="text-xs bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+              >
+                <LogIn className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                <span>ไปหน้าเช็คอิน</span>
+              </Button>
+            )}
           </div>
 
           {/* QR Code */}
-          <div className="pt-2 border-t border-slate-200/80 flex flex-col items-center">
-            <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-sm inline-block">
+          <div className="pt-3 border-t border-slate-200/80 flex flex-col items-center">
+            <div className="p-2.5 bg-white rounded-2xl border-2 border-emerald-200 shadow-md inline-block">
               <img
                 src={qrCodeUrl}
-                alt="QR Code รหัสจอง"
-                width={150}
-                height={150}
-                className="w-36 h-36 object-contain"
+                alt="QR Code สำหรับสแกนเช็คอินทันที"
+                width={160}
+                height={160}
+                className="w-40 h-40 object-contain rounded-lg"
               />
             </div>
-            <span className="text-[11px] text-slate-400 mt-2">
-              สามารถแคปหน้าจอ QR Code นี้เพื่อสแกนหรือแสดงหน้าห้องซ้อม
-            </span>
+            <div className="mt-2 text-center">
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                📷 สแกน QR ด้วยกล้องมือถือ เพื่อเช็คอินทันที
+              </span>
+              <p className="text-[11px] text-slate-400 mt-1">
+                หรือสามารถแคปภาพหน้าจอนี้เก็บไว้ใช้ยืนยันกับผู้ดูแลได้เลยครับ
+              </p>
+            </div>
           </div>
         </div>
 

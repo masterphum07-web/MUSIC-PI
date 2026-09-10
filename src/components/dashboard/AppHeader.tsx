@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CalendarPlus, LogIn, KeyRound } from 'lucide-react';
+import { Clock, CalendarPlus, LogIn, LogOut, KeyRound } from 'lucide-react';
 import { Button } from '@/components/common/Button';
 import dayjs from 'dayjs';
 
 export interface AppHeaderProps {
   onOpenBooking: () => void;
-  onOpenCheckIn: () => void;
+  onOpenCheckIn: (tab?: 'checkin' | 'checkout' | 'lookup') => void;
   onOpenAdmin: () => void;
 }
 
@@ -70,31 +70,39 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             </div>
 
             {/* Main Action Buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <Button
                 variant="gold"
                 size="sm"
                 onClick={onOpenBooking}
-                className="shadow-sm font-semibold sm:px-4"
+                className="shadow-sm font-semibold text-xs sm:text-sm px-2.5 sm:px-4"
               >
-                <CalendarPlus className="w-4 h-4 mr-1 text-amber-950" />
+                <CalendarPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 text-amber-950" />
                 <span>จองห้องซ้อม</span>
               </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onOpenCheckIn}
-                className="hidden sm:inline-flex border-slate-300"
+              <button
+                onClick={() => onOpenCheckIn('checkin')}
+                className="inline-flex items-center justify-center font-medium transition-all text-xs px-2.5 sm:px-3.5 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 shadow-sm"
+                title="เช็คอินเข้าใช้งานห้องซ้อม"
               >
-                <LogIn className="w-4 h-4 mr-1 text-secondary" />
-                <span>เช็คอิน / เอาต์</span>
-              </Button>
+                <LogIn className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                <span>เช็คอิน</span>
+              </button>
+
+              <button
+                onClick={() => onOpenCheckIn('checkout')}
+                className="hidden sm:inline-flex items-center justify-center font-medium transition-all text-xs px-2.5 sm:px-3.5 py-1.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 shadow-sm"
+                title="เช็คเอาต์ คืนห้องซ้อม"
+              >
+                <LogOut className="w-3.5 h-3.5 mr-1 text-amber-600" />
+                <span>คืนห้อง</span>
+              </button>
 
               {/* Admin Console Link */}
               <button
                 onClick={onOpenAdmin}
-                className="p-2 text-slate-400 hover:text-primary hover:bg-slate-100 rounded-xl transition-colors focus:outline-none"
+                className="p-1.5 sm:p-2 text-slate-400 hover:text-primary hover:bg-slate-100 rounded-xl transition-colors focus:outline-none"
                 title="เข้าสู่ระบบผู้ดูแล (Admin Console)"
                 aria-label="Admin Login"
               >

@@ -147,11 +147,11 @@ export async function createBooking(payload: {
   );
 }
 
-export async function lookupBooking(bookingCode: string, fullName: string): Promise<Booking> {
+export async function lookupBooking(bookingCode: string, fullName?: string): Promise<Booking> {
   return callApi<Booking>(
     {
       action: 'lookupBooking',
-      payload: { booking_code: bookingCode, full_name: fullName },
+      payload: { booking_code: bookingCode, full_name: fullName || '' },
     },
     0
   );
@@ -159,12 +159,12 @@ export async function lookupBooking(bookingCode: string, fullName: string): Prom
 
 export async function checkIn(
   bookingCode: string,
-  fullName: string
+  fullName?: string
 ): Promise<{ success: boolean; message: string; booking: Booking }> {
   return callApi<{ success: boolean; message: string; booking: Booking }>(
     {
       action: 'checkIn',
-      payload: { booking_code: bookingCode, full_name: fullName },
+      payload: { booking_code: bookingCode, full_name: fullName || '' },
     },
     0
   );
@@ -172,12 +172,12 @@ export async function checkIn(
 
 export async function checkOut(
   bookingCode: string,
-  fullName: string
+  fullName?: string
 ): Promise<{ success: boolean; message: string; booking: Booking }> {
   return callApi<{ success: boolean; message: string; booking: Booking }>(
     {
       action: 'checkOut',
-      payload: { booking_code: bookingCode, full_name: fullName },
+      payload: { booking_code: bookingCode, full_name: fullName || '' },
     },
     0
   );
@@ -223,10 +223,13 @@ export async function adminLogout(token: string): Promise<{ success: boolean; me
 // ==========================================
 
 export async function adminGetDashboard(token: string): Promise<DashboardData> {
-  return callApi<DashboardData>({
-    action: 'adminGetDashboard',
-    token,
-  });
+  return callApi<DashboardData>(
+    {
+      action: 'adminGetDashboard',
+      token,
+    },
+    2
+  );
 }
 
 export async function adminListBookings(
@@ -243,11 +246,14 @@ export async function adminListBookings(
     sort_dir?: 'asc' | 'desc';
   }
 ): Promise<{ items: Booking[]; total: number; page: number; limit: number; total_pages: number }> {
-  return callApi<{ items: Booking[]; total: number; page: number; limit: number; total_pages: number }>({
-    action: 'adminListBookings',
-    payload: query,
-    token,
-  });
+  return callApi<{ items: Booking[]; total: number; page: number; limit: number; total_pages: number }>(
+    {
+      action: 'adminListBookings',
+      payload: query,
+      token,
+    },
+    2
+  );
 }
 
 export async function adminUpdateBooking(
