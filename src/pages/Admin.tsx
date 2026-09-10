@@ -1,0 +1,248 @@
+﻿import React, { useState, useEffect, useCallback } from 'react';
+import { DashboardData, AdminUser } from '@/types';
+import { adminGetDashboard, adminLogout } from '@/lib/api';
+import { AdminOverview } from '@/components/admin/AdminOverview';
+import { AdminReservations } from '@/components/admin/AdminReservations';
+import { AdminRecipients } from '@/components/admin/AdminRecipients';
+import { AdminSettings } from '@/components/admin/AdminSettings';
+import { AdminLogs } from '@/components/admin/AdminLogs';
+import { Skeleton, ErrorState } from '@/components/common/States';
+import { Button } from '@/components/common/Button';
+import { useToast } from '@/components/common/Toast';
+import {
+  LayoutDashboard,
+  CalendarCheck,
+  Mail,
+  Settings,
+  ShieldCheck,
+  LogOut,
+  ArrowLeft,
+  Music,
+  FileText,
+  RotateCw,
+} from 'lucide-react';
+
+export interface AdminPageProps {
+  token: string;
+  adminUser: AdminUser | null;
+  onBackToHome: () => void;
+  onLogout: () => void;
+}
+
+export const AdminPage: React.FC<AdminPageProps> = ({
+  token,
+  adminUser,
+  onBackToHome,
+  onLogout,
+}) => {
+  const toast = useToast();
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'reservations' | 'recipients' | 'settings' | 'logs'
+  >('overview');
+
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadDashboard = useCallback(
+    async (isManual = false) => {
+      if (isManual) setIsRefreshing(true);
+      else setIsLoading(true);
+      setError(null);
+
+      try {
+        const data = await adminGetDashboard(token);
+        setDashboardData(data);
+      } catch (err: any) {
+        setError(err.message || 'ไม่สามารถโหลดข้อมูลสถิติหลังบ้านได้');
+        toast.error('เกิดข้อผิดพลาด', err.message);
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [token, toast]
+  );
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  const handleLogoutClick = async () => {
+    if (!window.confirm('คุณต้องการออกจากระบบผู้ดูแลหรือไม่?')) return;
+    try {
+      await adminLogout(token);
+    } catch {
+      // Ignored
+    }
+    localStorage.removeItem('wtk_admin_token');
+    localStorage.removeItem('wtk_admin_user');
+    toast.success('ออกจากระบบแล้ว', 'กลับสู่หน้าหลักสำหรับผู้ใช้งานทั่วไป');
+    onLogout();
+  };
+
+  const tabs = [
+    { id: 'overview', label: 'ภาพรวมและสถิติ', icon: LayoutDashboard },
+    { id: 'reservations', label: 'จัดการคิวการจอง', icon: CalendarCheck },
+    { id: 'recipients', label: 'อีเมลแจ้งเตือนอาจารย์/กรรมการ', icon: Mail },
+    { id: 'settings', label: 'ตั้งค่าระบบ', icon: Settings },
+    { id: 'logs', label: 'ประวัติระบบ (Audit Logs)', icon: FileText },
+  ];
+
+  return (
+    <div className="min-h-screen bg-surface flex flex-col justify-between">
+      <div>
+        {/* Admin Header */}
+        <header className="sticky top-0 z-30 bg-primary text-white border-b border-primary-dark shadow-md">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-20">
+              {/* Back to Home & Logo */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={onBackToHome}
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center gap-1.5 text-xs font-semibold"
+                  title="กลับหน้าจอหลักของนักศึกษา"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">กลับหน้าเว็บหลัก</span>
+                </button>
+
+                <div className="h-6 w-px bg-white/20 hidden sm:block" />
+
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-white text-primary flex items-center justify-center font-bold shadow-sm">
+                    <Music className="w-5 h-5 text-secondary" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase font-bold text-gold tracking-wider">
+                      Admin Console
+                    </div>
+                    <h1 className="text-base font-bold leading-tight">
+                      ระบบจัดการหลังบ้าน ชมรมดนตรี วทก.
+                    </h1>
+                  </div>
+                </div>
+              </div>
+
+              {/* Admin User Info & Logout */}
+              <div className="flex items-center gap-3">
+                <div className="hidden md:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl text-xs border border-white/15">
+                  <ShieldCheck className="w-4 h-4 text-gold" />
+                  <div>
+                    <span className="font-semibold block leading-tight">
+                      {adminUser?.display_name || 'ผู้ดูแลระบบ'}
+                    </span>
+                    <span className="text-[10px] text-blue-200">
+                      @{adminUser?.username || 'admin'}
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogoutClick}
+                  className="bg-white/10 hover:bg-rose-600 hover:border-rose-600 text-white border-white/20 text-xs transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5 mr-1" />
+                  <span className="hidden sm:inline">ออกจากระบบ</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Navigation Tabs Bar */}
+            <div className="flex space-x-1 overflow-x-auto pb-1 pt-1 scrollbar-none">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                      isActive
+                        ? 'bg-white text-primary shadow-sm font-bold'
+                        : 'text-blue-100 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-secondary' : 'text-blue-200'}`} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </header>
+
+        {/* Main Admin Content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {/* Top Refresh Control */}
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span className="font-medium">
+              เข้าสู่ระบบในชื่อ: <strong>{adminUser?.display_name}</strong> ({adminUser?.role || 'admin'})
+            </span>
+
+            {activeTab === 'overview' && (
+              <button
+                onClick={() => loadDashboard(true)}
+                disabled={isRefreshing || isLoading}
+                className="inline-flex items-center gap-1.5 text-primary hover:text-primary-dark font-semibold focus:outline-none disabled:opacity-50"
+              >
+                <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>รีเฟรชสถิติ</span>
+              </button>
+            )}
+          </div>
+
+          {/* Tab 1: Overview */}
+          {activeTab === 'overview' && (
+            <>
+              {error && !dashboardData && (
+                <ErrorState message={error} onRetry={() => loadDashboard()} />
+              )}
+
+              {isLoading && !dashboardData && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <Skeleton key={i} className="h-28 w-full" />
+                    ))}
+                  </div>
+                  <Skeleton className="h-72 w-full" />
+                  <Skeleton className="h-64 w-full" />
+                </div>
+              )}
+
+              {dashboardData && <AdminOverview data={dashboardData} />}
+            </>
+          )}
+
+          {/* Tab 2: Reservations */}
+          {activeTab === 'reservations' && <AdminReservations token={token} />}
+
+          {/* Tab 3: Email Recipients */}
+          {activeTab === 'recipients' && <AdminRecipients token={token} />}
+
+          {/* Tab 4: Settings */}
+          {activeTab === 'settings' && (
+            <AdminSettings
+              token={token}
+              onSettingsSaved={() => {
+                loadDashboard(true);
+              }}
+            />
+          )}
+
+          {/* Tab 5: Audit Logs */}
+          {activeTab === 'logs' && <AdminLogs token={token} />}
+        </main>
+      </div>
+
+      {/* Admin Footer */}
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 border-t border-slate-200 text-center text-xs text-slate-400">
+        ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก (วทก.) • แผงควบคุมผู้ดูแลระบบ (Admin Console)
+      </footer>
+    </div>
+  );
+};

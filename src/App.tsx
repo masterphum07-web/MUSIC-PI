@@ -1,15 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Home } from '@/pages/Home';
+import { AdminPage } from '@/pages/Admin';
 import { ToastProvider } from '@/components/common/Toast';
 import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
 import { BookingModal } from '@/components/booking/BookingModal';
 import { BookingSuccessModal } from '@/components/booking/BookingSuccessModal';
 import { CheckInOutModal } from '@/components/checkin/CheckInOutModal';
-import { Booking, PublicState } from '@/types';
-import { Sparkles } from 'lucide-react';
+import { AdminLoginModal } from '@/components/admin/AdminLoginModal';
+import { Booking, PublicState, AdminUser } from '@/types';
 
 function AppContent() {
+  const [currentView, setCurrentView] = useState<'home' | 'admin'>('home');
+  const [adminToken, setAdminToken] = useState<string | null>(() =>
+    localStorage.getItem('wtk_admin_token')
+  );
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(() => {
+    const saved = localStorage.getItem('wtk_admin_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [bookingPrefill, setBookingPrefill] = useState<{
@@ -21,9 +31,27 @@ function AppContent() {
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [newBooking, setNewBooking] = useState<Booking | null>(null);
   const [isCheckInOutOpen, setIsCheckInOutOpen] = useState(false);
-  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [publicState, setPublicState] = useState<PublicState | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // ตรวจสอบ URL Hash เช่น #admin เพื่อเปิดหน้าแอดมินโดยตรง
+  useEffect(() => {
+    const checkHash = () => {
+      if (window.location.hash === '#admin') {
+        const savedToken = localStorage.getItem('wtk_admin_token');
+        if (savedToken) {
+          setCurrentView('admin');
+        } else {
+          setIsAdminLoginOpen(true);
+        }
+      }
+    };
+
+    checkHash();
+    window.addEventListener('hashchange', checkHash);
+    return () => window.removeEventListener('hashchange', checkHash);
+  }, []);
 
   const handleOpenBooking = (prefill?: {
     roomId?: string;
@@ -51,12 +79,47 @@ function AppContent() {
   };
 
   const handleOpenAdmin = () => {
-    setIsAdminModalOpen(true);
+    if (adminToken) {
+      setCurrentView('admin');
+      window.location.hash = 'admin';
+    } else {
+      setIsAdminLoginOpen(true);
+    }
   };
 
+  const handleAdminLoginSuccess = (token: string, user: AdminUser) => {
+    setAdminToken(token);
+    setAdminUser(user);
+    setIsAdminLoginOpen(false);
+    setCurrentView('admin');
+    window.location.hash = 'admin';
+  };
+
+  const handleAdminLogout = () => {
+    setAdminToken(null);
+    setAdminUser(null);
+    setCurrentView('home');
+    window.location.hash = '';
+  };
+
+  // หากอยู่ในหน้าแอดมิน และมี Token ให้แสดง AdminPage
+  if (currentView === 'admin' && adminToken) {
+    return (
+      <AdminPage
+        token={adminToken}
+        adminUser={adminUser}
+        onBackToHome={() => {
+          setCurrentView('home');
+          window.location.hash = '';
+        }}
+        onLogout={handleAdminLogout}
+      />
+    );
+  }
+
+  // หน้าจอผู้ใช้งานทั่วไป (Home Public Dashboard)
   return (
     <>
-      {/* Main Home Page */}
       <Home
         onOpenBookingModal={handleOpenBooking}
         onOpenCheckInOutModal={handleOpenCheckIn}
@@ -90,7 +153,14 @@ function AppContent() {
         onBookingUpdated={handleBookingUpdated}
       />
 
-      {/* 4. Booking Detail Modal (เมื่อคลิกที่บล็อกการจองบน Timeline) */}
+      {/* 4. Modal เข้าสู่ระบบผู้ดูแล Admin Login (Phase 8) */}
+      <AdminLoginModal
+        isOpen={isAdminLoginOpen}
+        onClose={() => setIsAdminLoginOpen(false)}
+        onSuccess={handleAdminLoginSuccess}
+      />
+
+      {/* 5. Booking Detail Modal (เมื่อคลิกที่บล็อกการจองบน Timeline) */}
       <Modal
         isOpen={!!selectedBooking}
         onClose={() => setSelectedBooking(null)}
@@ -147,30 +217,6 @@ function AppContent() {
             </div>
           </div>
         )}
-      </Modal>
-
-      {/* 5. Placeholder สำหรับ Admin Console (เตรียมพร้อมสำหรับ Phase 8) */}
-      <Modal
-        isOpen={isAdminModalOpen}
-        onClose={() => setIsAdminModalOpen(false)}
-        title="เข้าสู่ระบบผู้ดูแล (Admin Console)"
-        description="ระบบหลังบ้านสำหรับผู้ดูแลชมรมและอาจารย์ที่ปรึกษา"
-      >
-        <div className="space-y-4 py-2">
-          <div className="text-xs text-slate-600 space-y-2">
-            <p>ระบบหลังบ้านพร้อมแดชบอร์ดกราฟ KPI, สถิติ Heatmap และจัดการผู้รับอีเมลแจ้งเตือน</p>
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-850 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
-              <span>หน้าต่างเข้าสู่ระบบและแดชบอร์ดแอดมินเต็มรูปแบบเตรียมเปิดใช้งานใน <strong>PHASE 8</strong></span>
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <Button size="sm" variant="primary" onClick={() => setIsAdminModalOpen(false)}>
-              รับทราบ
-            </Button>
-          </div>
-        </div>
       </Modal>
     </>
   );
