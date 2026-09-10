@@ -24,7 +24,7 @@ export const RoomStatusCards: React.FC<RoomStatusCardsProps> = ({
     : -1;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div className={rooms.length === 1 ? 'grid grid-cols-1 max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'}>
       {rooms.map((room) => {
         // หาคิวการจองของห้องนี้ในวันที่เลือก
         const roomBookings = bookings.filter(

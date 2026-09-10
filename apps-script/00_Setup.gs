@@ -237,33 +237,13 @@ function seedInitialData(ss) {
   var sampleRooms = [
     [
       "ROOM-01",
-      "ห้องซ้อมรวม A (ใหญ่)",
-      8,
-      "กลองชุด Pearl, แอมป์กีตาร์ Marshall x2, แอมป์เบส Fender, คีย์บอร์ด Roland, ไมโครโฟน Shure x3, PA System",
-      "#1B7A8C",
+      "ห้องซ้อมดนตรี ชมรมดนตรี วทก.",
+      10,
+      "กลองชุด Pearl, แอมป์กีตาร์ Marshall x2, แอมป์เบส Fender, คีย์บอร์ด Roland, ไมโครโฟน Shure x3, PA System & มอนิเตอร์",
+      "#0F3D5C",
       "TRUE",
       1,
       "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80"
-    ],
-    [
-      "ROOM-02",
-      "ห้องซ้อมวง B (กลาง)",
-      5,
-      "กลองชุด Yamaha, แอมป์กีตาร์ Fender x1, แอมป์กีตาร์ Roland x1, แอมป์เบส Ampeg, ไมโครโฟน x2",
-      "#0F3D5C",
-      "TRUE",
-      2,
-      "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=600&q=80"
-    ],
-    [
-      "ROOM-03",
-      "ห้องซ้อมส่วนตัว/เปียโน C",
-      3,
-      "เปียโนไฟฟ้า Yamaha Clavinova, แอมป์กีตาร์โปร่ง, ไมโครโฟนคอนเดนเซอร์, หูฟังมอนิเตอร์",
-      "#C9A227",
-      "TRUE",
-      3,
-      "https://images.unsplash.com/photo-1520523839898-5071270438a4?auto=format&fit=crop&w=600&q=80"
     ]
   ];
   roomsSheet.getRange(2, 1, sampleRooms.length, sampleRooms[0].length).setValues(sampleRooms);
