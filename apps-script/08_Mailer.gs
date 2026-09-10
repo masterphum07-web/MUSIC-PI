@@ -157,24 +157,29 @@ function sendBookingConfirmationToUser(booking) {
   var webBaseUrl = "https://masterphum07-web.github.io/MUSIC-PI/";
   var checkInUrl = webBaseUrl + "?action=checkin&code=" + encodeURIComponent(booking.booking_code);
   var checkOutUrl = webBaseUrl + "?action=checkout&code=" + encodeURIComponent(booking.booking_code);
+  var cancelUrl = webBaseUrl + "?action=cancel&code=" + encodeURIComponent(booking.booking_code);
   var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" + encodeURIComponent(checkInUrl);
 
   var content = '<h3 style="margin-top: 0; color: #0F3D5C;">ยินดีด้วย! การจองห้องซ้อมสำเร็จแล้ว</h3>' +
-    '<p>สวัสดีคุณ <strong>' + booking.full_name + '</strong> ระบบได้บันทึกการจองห้องซ้อมดนตรีของคุณเรียบร้อยแล้ว คุณสามารถใช้ปุ่มลัดด้านล่างหรือสแกน QR Code เพื่อเช็คอินเข้าใช้งานได้ทันที:</p>' +
+    '<p>สวัสดีคุณ <strong>' + booking.full_name + '</strong> ระบบได้บันทึกการจองห้องซ้อมดนตรีของคุณเรียบร้อยแล้ว คุณสามารถใช้ปุ่มลัดด้านล่างหรือสแกน QR Code เพื่อดำเนินการได้ทันที:</p>' +
     
     // Quick Action Buttons Container
     '<div style="text-align: center; margin: 20px 0;">' +
-      '<a href="' + checkInUrl + '" target="_blank" style="display: inline-block; background-color: #16A34A; color: #FFFFFF; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: bold; font-size: 14px; margin: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">' +
-        '🟢 กดเพื่อยืนยันเช็คอินทันที' +
+      '<a href="' + checkInUrl + '" target="_blank" style="display: inline-block; background-color: #16A34A; color: #FFFFFF; text-decoration: none; padding: 12px 18px; border-radius: 10px; font-weight: bold; font-size: 13px; margin: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">' +
+        '🟢 กดยืนยันเช็คอิน' +
       '</a>' +
-      '<a href="' + checkOutUrl + '" target="_blank" style="display: inline-block; background-color: #0F3D5C; color: #FFFFFF; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: bold; font-size: 14px; margin: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">' +
-        '🚪 กดเพื่อยืนยันเช็คเอาต์คืนห้อง' +
+      '<a href="' + checkOutUrl + '" target="_blank" style="display: inline-block; background-color: #0F3D5C; color: #FFFFFF; text-decoration: none; padding: 12px 18px; border-radius: 10px; font-weight: bold; font-size: 13px; margin: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">' +
+        '🚪 กดยืนยันคืนห้อง' +
+      '</a>' +
+      '<a href="' + cancelUrl + '" target="_blank" style="display: inline-block; background-color: #DC2626; color: #FFFFFF; text-decoration: none; padding: 12px 18px; border-radius: 10px; font-weight: bold; font-size: 13px; margin: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">' +
+        '❌ ขอยกเลิกการจอง' +
       '</a>' +
     '</div>' +
 
     '<div style="text-align: center; margin: 24px 0; padding: 20px; background-color: #F1F5F9; border-radius: 12px; border: 2px dashed #CBD5E1;">' +
-      '<div style="font-size: 13px; color: #64748B; margin-bottom: 6px;">รหัสการจองของคุณ (Booking Code)</div>' +
+      '<div style="font-size: 13px; color: #64748B; margin-bottom: 6px;">รหัสการจองและรหัสผ่านเข้าห้อง (Room & Booking Code)</div>' +
       '<div style="font-size: 28px; font-weight: 800; color: #0F3D5C; letter-spacing: 3px; font-family: monospace;">' + booking.booking_code + '</div>' +
+      '<div style="font-size: 12px; color: #16A34A; font-weight: bold; margin-top: 4px;">* ใช้รหัสนี้สำหรับแจ้งเข้าห้องซ้อม หรือสแกน QR Code หน้าห้อง</div>' +
       '<div style="margin-top: 15px;"><img src="' + qrUrl + '" alt="QR Code สแกนเช็คอิน" width="160" height="160" style="display: block; margin: 0 auto; border-radius: 8px; border: 1px solid #E2E8F0;"></div>' +
       '<div style="font-size: 12px; color: #64748B; margin-top: 8px;">ใช้กล้องมือถือสแกน QR Code นี้เพื่อเปิดหน้ายืนยันเช็คอินในคลิกเดียว</div>' +
     '</div>' +

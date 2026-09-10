@@ -57,11 +57,21 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
 
       // ตรวจสอบค่าจาก initialBookingCode ก่อน
       if (initialBookingCode) {
-        setBookingCode(initialBookingCode.toUpperCase());
+        const codeUpper = initialBookingCode.toUpperCase();
+        setBookingCode(codeUpper);
         const localMatch = bookings.find(
-          (b) => b.booking_code?.toUpperCase() === initialBookingCode.toUpperCase()
+          (b) => b.booking_code?.toUpperCase() === codeUpper
         );
-        if (localMatch) setBooking(localMatch);
+        if (localMatch) {
+          setBooking(localMatch);
+        } else {
+          // โหลดข้อมูลอัตโนมัติจาก Backend เมื่อผู้ใช้เปิดผ่าน Deep Link
+          setIsLoading(true);
+          lookupBooking(codeUpper)
+            .then((data) => setBooking(data))
+            .catch(() => {})
+            .finally(() => setIsLoading(false));
+        }
         return;
       }
 
@@ -204,20 +214,22 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
     }
   };
 
-  // ยกเลิกคิว (Cancel)
+  // ยกเลิกคิว (Cancel / Early Release)
   const handleCancelBooking = async () => {
     if (!booking) return;
-    const reason = window.prompt('กรุณาระบุเหตุผลในการยกเลิกคิว (ไม่บังคับ):', 'ติดธุระด่วน');
-    if (reason === null) return;
+    const isConfirmed = window.confirm(
+      `คุณต้องการยกเลิกคิวรหัส ${booking.booking_code} (ห้อง ${booking.room_id} วันที่ ${booking.booking_date}) เพื่อคืนห้องว่างให้นักศึกษาท่านอื่นใช่หรือไม่?`
+    );
+    if (!isConfirmed) return;
 
     setActionLoading(true);
     try {
-      const res = await cancelBooking(booking.booking_code, booking.full_name, reason || 'ผู้จองขอยกเลิก');
-      toast.success('ยกเลิกคิวสำเร็จ', 'ระบบได้คืนสล็อตเวลาห้องว่างให้ผู้อื่นแล้ว');
+      const res = await cancelBooking(booking.booking_code, booking.full_name || undefined, 'ผู้จองขอยกเลิกด้วยตนเอง');
+      toast.success('ยกเลิกคิวสำเร็จ!', 'ระบบได้คืนสล็อตเวลาห้องว่างให้ผู้อื่นเรียบร้อยแล้วครับ');
       setBooking(res.booking);
       if (onBookingUpdated) onBookingUpdated(res.booking);
     } catch (err: any) {
-      toast.error('ยกเลิกไม่สำเร็จ', err.message);
+      toast.error('ยกเลิกไม่สำเร็จ', err.message || 'เกิดข้อผิดพลาดในการยกเลิกคิว');
     } finally {
       setActionLoading(false);
     }
@@ -275,7 +287,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
             }`}
           >
             <Search className="w-3.5 h-3.5" />
-            <span>ดูรายละเอียด</span>
+            <span>❌ ยกเลิก / ตรวจสอบ</span>
           </button>
         </div>
 
@@ -344,7 +356,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
           <form onSubmit={handleDirectCheckOut} className="space-y-4">
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
               <div className="text-xs text-slate-700 leading-relaxed">
-                🚪 <strong>เช็คเอาต์คืนห้อง:</strong> เมื่อซ้อมเสร็จเรียบร้อย กรอกรหัสการจองเพื่อส่งมอบคืนห้องซ้อมดนตรีให้กับชมรม
+                🚪 <strong>เช็คเอาต์ / คืนห้องก่อนเวลา:</strong> เมื่อซ้อมเสร็จเรียบร้อย หรือประสงค์สละสิทธิ์คืนห้อง กรอกรหัสการจองเพื่อส่งมอบคืนห้องซ้อมได้ทันที
               </div>
 
               <Input
@@ -454,16 +466,43 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
             )}
 
             {/* Action buttons inside card */}
-            <div className="pt-2 flex items-center gap-2">
+            <div className="pt-2">
               {booking.status === 'booked' && (
-                <button
-                  type="button"
-                  onClick={handleCancelBooking}
-                  disabled={actionLoading}
-                  className="text-xs text-rose-600 hover:text-rose-700 underline font-medium"
-                >
-                  ขอยกเลิกคิวนี้
-                </button>
+                <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 space-y-2">
+                  <div className="text-[11px] text-rose-800">
+                    💡 หากติดธุระหรือไม่สะดวกเข้าใช้งาน สามารถกดยกเลิกการจองเพื่อปล่อยห้องว่างให้นักศึกษาท่านอื่นจองต่อได้ทันทีครับ
+                  </div>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    onClick={handleCancelBooking}
+                    loading={actionLoading}
+                    disabled={actionLoading}
+                    className="w-full font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs"
+                  >
+                    ❌ ยืนยันยกเลิกการจอง / คืนห้องก่อนเวลา
+                  </Button>
+                </div>
+              )}
+
+              {booking.status === 'checked_in' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+                  <div className="text-[11px] text-amber-800">
+                    🚪 ซ้อมดนตรีเสร็จเรียบร้อยแล้วใช่ไหม? สามารถกดคืนห้องได้ทันทีแม้ยังไม่หมดเวลาก็ได้ครับ
+                  </div>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={handleDirectCheckOut}
+                    loading={actionLoading}
+                    disabled={actionLoading}
+                    className="w-full font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+                  >
+                    🚪 ยืนยันเช็คเอาต์และคืนห้องซ้อม (เสร็จก่อนเวลา)
+                  </Button>
+                </div>
               )}
             </div>
           </div>

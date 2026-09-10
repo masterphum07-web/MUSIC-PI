@@ -526,15 +526,22 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <Input
-                label="อีเมล (ไม่บังคับ — รับใบยืนยัน & QR Code)"
-                placeholder="เช่น student@gmail.com"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                error={errors.email}
-                helperText="หากกรอก ระบบจะส่งใบยืนยันการจองไปที่เมลนี้"
-              />
+              <div className="space-y-1">
+                <Input
+                  label="อีเมลผู้จอง (แนะนำอย่างยิ่ง — รับรหัสห้อง & รหัสจอง)"
+                  placeholder="เช่น student@gmail.com"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  error={errors.email}
+                />
+                <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200/90 rounded-xl p-2 flex items-start gap-1.5 leading-snug">
+                  <span className="text-amber-600 font-bold flex-shrink-0 mt-0.5">📧</span>
+                  <span>
+                    <strong>สำคัญ:</strong> รหัสการจอง, รหัสผ่านเข้าห้องซ้อม และปุ่มกดเช็คอิน/คืนห้อง จะถูกส่งไปยังอีเมลนี้ทันทีหลังจองสำเร็จครับ
+                  </span>
+                </div>
+              </div>
 
               <Input
                 label="จำนวนผู้ร่วมใช้งาน (คน) *"

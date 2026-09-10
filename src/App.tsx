@@ -51,9 +51,10 @@ function AppContent() {
       const url = new URL(window.location.href);
       const action = url.searchParams.get('action');
       const code = url.searchParams.get('code');
-      if (action === 'checkin' || action === 'checkout' || code) {
+      if (action === 'checkin' || action === 'checkout' || action === 'cancel' || code) {
         if (code) setInitialBookingCode(code.toUpperCase());
         if (action === 'checkout') setCheckInOutTab('checkout');
+        else if (action === 'cancel') setCheckInOutTab('lookup');
         else setCheckInOutTab('checkin');
         setIsCheckInOutOpen(true);
       }

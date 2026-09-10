@@ -185,13 +185,13 @@ export async function checkOut(
 
 export async function cancelBooking(
   bookingCode: string,
-  fullName: string,
-  reason: string
+  fullName?: string,
+  reason?: string
 ): Promise<{ success: boolean; message: string; booking: Booking }> {
   return callApi<{ success: boolean; message: string; booking: Booking }>(
     {
       action: 'cancelBooking',
-      payload: { booking_code: bookingCode, full_name: fullName, reason },
+      payload: { booking_code: bookingCode, full_name: fullName || '', reason: reason || 'ผู้จองขอยกเลิกด้วยตนเอง' },
     },
     0
   );

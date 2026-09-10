@@ -559,7 +559,7 @@ function checkIn(bookingCode, fullName, context) {
   var now = new Date();
   var todayStr = Utilities.formatDate(now, Session.getScriptTimeZone() || "GMT+7", "yyyy-MM-dd");
   if (booking.booking_date !== todayStr) {
-    throw new Error("ไม่สามารถเช็คอินได้เนื่องจากไม่ใช่วันที่ที่คุณจองไว้ (" + booking.booking_date + ")");
+    throw new Error("ยังไม่ถึงวันที่จอง คิวของคุณคือวันที่ " + booking.booking_date + " (วันนี้คือวันที่ " + todayStr + ")");
   }
 
   var currentMins = timeToMinutes(Utilities.formatDate(now, Session.getScriptTimeZone() || "GMT+7", "HH:mm"));
@@ -569,8 +569,7 @@ function checkIn(bookingCode, fullName, context) {
 
   // เช็คอินได้ตั้งแต่ 15 นาทีก่อนเริ่ม
   if (currentMins < startMins - 15) {
-    var diff = (startMins - 15) - currentMins;
-    throw new Error("ยังไม่ถึงเวลาเช็คอิน สามารถเช็คอินได้ล่วงหน้า 15 นาที (อีกประมาณ " + diff + " นาที)");
+    throw new Error("ยังไม่ถึงเวลาเช็คอิน (รอบการจองของคุณคือ " + booking.start_time + " - " + booking.end_time + " น.) สามารถเช็คอินได้ล่วงหน้า 15 นาทีครับ");
   }
 
   // หากเลย start_time + grace_period ให้ปรับเป็น no_show
@@ -619,10 +618,18 @@ function checkIn(bookingCode, fullName, context) {
 }
 
 /**
- * ดำเนินการเช็คเอาต์ (Check-out)
+ * ดำเนินการเช็คเอาต์ / คืนห้องซ้อม (Check-out)
+ * รองรับ:
+ * 1) คิวที่กำลังใช้งาน (checked_in) -> บันทึก checkout_at และปรับเป็น checked_out
+ * 2) คิวที่ยังไม่ได้เช็คอิน (booked) แต่ผู้ใช้ประสงค์จะคืนห้องหรือสละสิทธิ์ก่อนเวลา -> ปรับเป็นการยกเลิก/คืนห้องว่างทันที
  */
 function checkOut(bookingCode, fullName, context) {
   var booking = lookupBooking(bookingCode, fullName);
+
+  // หากสถานะยังเป็น booked ให้แปลงเป็นการคืนห้อง/ยกเลิกคิวก่อนเวลาอัตโนมัติ เพื่อปลดปล่อยสล็อตเวลาให้ผู้อื่น
+  if (booking.status === "booked" || booking.status === "confirmed") {
+    return cancelBooking(bookingCode, fullName, "ผู้จองประสงค์คืนห้อง/สละสิทธิ์ก่อนเวลา", context);
+  }
 
   if (booking.status !== "checked_in") {
     throw new Error("คิวนี้ไม่ได้อยู่ในสถานะกำลังใช้งาน (สถานะปัจจุบัน: " + booking.status + ")");
@@ -654,29 +661,38 @@ function checkOut(bookingCode, fullName, context) {
 
   return {
     success: true,
-    message: "เช็คเอาต์เรียบร้อยแล้ว ขอบคุณที่ดูแลห้องซ้อมครับ",
+    message: "เช็คเอาต์และคืนห้องซ้อมเรียบร้อยแล้ว ขอบคุณที่ดูแลห้องซ้อมครับ",
     booking: updated
   };
 }
 
 /**
- * ยกเลิกการจองโดยผู้ใช้ (Cancel Booking)
- * อนุญาตเฉพาะคิวที่สถานะเป็น 'booked' และยังไม่ถึงเวลาเริ่มจอง
+ * ยกเลิกการจองโดยผู้ใช้ (Cancel Booking / Early Release)
+ * รองรับการยกเลิกคิวที่ยังไม่หมดเวลาซ้อม
  */
 function cancelBooking(bookingCode, fullName, cancelReason, context) {
   var booking = lookupBooking(bookingCode, fullName);
 
-  if (booking.status !== "booked") {
-    throw new Error("ไม่สามารถยกเลิกได้ เนื่องจากสถานะปัจจุบันคือ: " + booking.status);
+  // หากอยู่ในสถานะ checked_in และต้องการยกเลิก ให้ถือเป็นการเช็คเอาต์ออกทันที
+  if (booking.status === "checked_in") {
+    return checkOut(bookingCode, fullName, context);
+  }
+
+  if (booking.status === "cancelled") {
+    throw new Error("คิวนี้ถูกยกเลิกไปเรียบร้อยแล้ว");
+  }
+
+  if (booking.status === "checked_out") {
+    throw new Error("คิวนี้ได้เช็คเอาต์และสิ้นสุดการใช้งานไปแล้ว");
   }
 
   var now = new Date();
   var todayStr = Utilities.formatDate(now, Session.getScriptTimeZone() || "GMT+7", "yyyy-MM-dd");
   if (booking.booking_date === todayStr) {
     var currentMins = timeToMinutes(Utilities.formatDate(now, Session.getScriptTimeZone() || "GMT+7", "HH:mm"));
-    var startMins = timeToMinutes(booking.start_time);
-    if (currentMins >= startMins) {
-      throw new Error("ไม่สามารถยกเลิกคิวได้เนื่องจากเลยเวลาเริ่มต้นการซ้อมไปแล้ว กรุณาติดต่อแอดมิน");
+    var endMins = timeToMinutes(booking.end_time);
+    if (currentMins >= endMins) {
+      throw new Error("คิวนี้ได้สิ้นสุดช่วงเวลาการซ้อมไปแล้ว ไม่สามารถยกเลิกได้");
     }
   }
 
@@ -706,7 +722,7 @@ function cancelBooking(bookingCode, fullName, cancelReason, context) {
 
   return {
     success: true,
-    message: "ยกเลิกการจองเรียบร้อยแล้ว",
+    message: "ยกเลิกการจองและคืนห้องซ้อมว่างให้ผู้อื่นเรียบร้อยแล้ว",
     booking: updated
   };
 }
