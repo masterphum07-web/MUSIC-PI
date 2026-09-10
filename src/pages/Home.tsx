@@ -8,7 +8,7 @@ import { RoomStatusCards } from '@/components/dashboard/RoomStatusCards';
 import { TimelineGrid } from '@/components/dashboard/TimelineGrid';
 import { TodaySummary } from '@/components/dashboard/TodaySummary';
 import { RulesFooter } from '@/components/dashboard/RulesFooter';
-import { Skeleton, ErrorState, EmptyState } from '@/components/common/States';
+import { Skeleton, ErrorState } from '@/components/common/States';
 import { RotateCw, Music } from 'lucide-react';
 import dayjs from 'dayjs';
 
@@ -17,6 +17,8 @@ export interface HomeProps {
   onOpenCheckInOutModal: () => void;
   onOpenAdminLogin: () => void;
   onSelectBookingDetail: (booking: Booking) => void;
+  refreshTrigger?: number;
+  onStateLoaded?: (state: PublicState) => void;
 }
 
 export const Home: React.FC<HomeProps> = ({
@@ -24,6 +26,8 @@ export const Home: React.FC<HomeProps> = ({
   onOpenCheckInOutModal,
   onOpenAdminLogin,
   onSelectBookingDetail,
+  refreshTrigger,
+  onStateLoaded,
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>(() => dayjs().format('YYYY-MM-DD'));
   const [state, setState] = useState<PublicState | null>(null);
@@ -44,6 +48,7 @@ export const Home: React.FC<HomeProps> = ({
     try {
       const res = await getPublicState(date);
       setState(res);
+      if (onStateLoaded) onStateLoaded(res);
       setLastUpdated(dayjs().format('HH:mm:ss'));
     } catch (err: any) {
       console.error('Error fetching public state:', err);
@@ -52,12 +57,19 @@ export const Home: React.FC<HomeProps> = ({
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [onStateLoaded]);
 
   // ดึงข้อมูลครั้งแรก และเมื่อเลือกวันที่เปลี่ยนไป
   useEffect(() => {
     loadData(selectedDate);
   }, [selectedDate, loadData]);
+
+  // รีเฟรชเมื่อมีการแจ้งเตือนจากภายนอก เช่น จองสำเร็จ หรือ เช็คอิน/เช็คเอาต์
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) {
+      loadData(selectedDate, true);
+    }
+  }, [refreshTrigger, selectedDate, loadData]);
 
   // ระบบ Auto-refresh ทุก 60 วินาที
   useEffect(() => {
@@ -144,62 +156,79 @@ export const Home: React.FC<HomeProps> = ({
           )}
 
           {/* Data Loaded Successfully */}
-          {state && (
-            <>
-              {/* 3. Today Metrics Summary */}
-              <TodaySummary
-                bookings={state.bookings || []}
-                rooms={state.rooms || []}
-                selectedDate={selectedDate}
-              />
+          {state && (() => {
+            // ล็อคให้แสดงห้องซ้อมเดี่ยวของ วทก. ตามความต้องการของผู้ใช้
+            const baseRoom = state.rooms.find((r) => r.room_id === 'ROOM-01') || state.rooms[0] || {
+              room_id: 'ROOM-01',
+              room_name: 'ห้องซ้อมดนตรี ชมรมดนตรี วทก.',
+              capacity: 10,
+              equipment_list: 'กลองชุด Pearl, แอมป์กีตาร์ Marshall, แอมป์เบส Fender, คีย์บอร์ด Roland, ไมโครโฟน Shure x2, PA System',
+              color_hex: '#1B7A8C',
+              sort_order: 1,
+            };
+            const singleRooms = [
+              {
+                ...baseRoom,
+                room_id: 'ROOM-01',
+                room_name: 'ห้องซ้อมดนตรี ชมรมดนตรี วทก.',
+                capacity: baseRoom.capacity || 10,
+                equipment_list: baseRoom.equipment_list || 'กลองชุด, แอมป์กีตาร์, แอมป์เบส, คีย์บอร์ด, ไมโครโฟน, PA System',
+              },
+            ];
 
-              {/* 4. Room Status Cards */}
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-base sm:text-lg font-bold text-primary flex items-center gap-2">
-                    <Music className="w-5 h-5 text-secondary" />
-                    <span>สถานะห้องซ้อมดนตรี</span>
-                  </h2>
-                </div>
+            return (
+              <>
+                {/* 3. Today Metrics Summary */}
+                <TodaySummary
+                  bookings={state.bookings || []}
+                  rooms={singleRooms}
+                  selectedDate={selectedDate}
+                />
 
-                {state.rooms.length === 0 ? (
-                  <EmptyState title="ไม่พบห้องซ้อมที่เปิดให้บริการ" />
-                ) : (
+                {/* 4. Room Status Cards */}
+                <section className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base sm:text-lg font-bold text-primary flex items-center gap-2">
+                      <Music className="w-5 h-5 text-secondary" />
+                      <span>สถานะห้องซ้อมดนตรี</span>
+                    </h2>
+                  </div>
+
                   <RoomStatusCards
-                    rooms={state.rooms}
+                    rooms={singleRooms}
                     bookings={state.bookings || []}
                     selectedDate={selectedDate}
                     onBookRoom={(roomId) =>
                       onOpenBookingModal({ roomId, date: selectedDate })
                     }
                   />
-                )}
-              </section>
+                </section>
 
-              {/* 5. Timeline Grid (Main Interactive Component) */}
-              <section className="space-y-3">
-                <TimelineGrid
-                  rooms={state.rooms}
-                  bookings={state.bookings || []}
-                  selectedDate={selectedDate}
-                  operatingHours={
-                    dayjs(selectedDate).day() === 0 || dayjs(selectedDate).day() === 6
-                      ? state.settings?.operating_hours_weekend || '09:00-18:00'
-                      : state.settings?.operating_hours_weekday || '08:00-20:00'
-                  }
-                  onSelectSlot={(roomId, date, startTime, endTime) => {
-                    onOpenBookingModal({
-                      roomId,
-                      date,
-                      startTime,
-                      endTime,
-                    });
-                  }}
-                  onSelectBooking={onSelectBookingDetail}
-                />
-              </section>
-            </>
-          )}
+                {/* 5. Timeline Grid (Main Interactive Component) */}
+                <section className="space-y-3">
+                  <TimelineGrid
+                    rooms={singleRooms}
+                    bookings={state.bookings || []}
+                    selectedDate={selectedDate}
+                    operatingHours={
+                      dayjs(selectedDate).day() === 0 || dayjs(selectedDate).day() === 6
+                        ? state.settings?.operating_hours_weekend || '09:00-18:00'
+                        : state.settings?.operating_hours_weekday || '08:00-20:00'
+                    }
+                    onSelectSlot={(roomId, date, startTime, endTime) => {
+                      onOpenBookingModal({
+                        roomId,
+                        date,
+                        startTime,
+                        endTime,
+                      });
+                    }}
+                    onSelectBooking={onSelectBookingDetail}
+                  />
+                </section>
+              </>
+            );
+          })()}
 
           {/* 6. Rules Footer */}
           <RulesFooter contactInfo={state?.settings?.contact_info} />

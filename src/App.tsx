@@ -3,26 +3,55 @@ import { Home } from '@/pages/Home';
 import { ToastProvider } from '@/components/common/Toast';
 import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
-import { Booking } from '@/types';
+import { BookingModal } from '@/components/booking/BookingModal';
+import { BookingSuccessModal } from '@/components/booking/BookingSuccessModal';
+import { CheckInOutModal } from '@/components/checkin/CheckInOutModal';
+import { Booking, PublicState } from '@/types';
 import { Sparkles } from 'lucide-react';
 
 function AppContent() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [demoModalOpen, setDemoModalOpen] = useState<{
-    type: 'booking' | 'checkin' | 'admin';
-    prefill?: any;
-  } | null>(null);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [bookingPrefill, setBookingPrefill] = useState<{
+    roomId?: string;
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+  } | undefined>(undefined);
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [newBooking, setNewBooking] = useState<Booking | null>(null);
+  const [isCheckInOutOpen, setIsCheckInOutOpen] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [publicState, setPublicState] = useState<PublicState | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const handleOpenBooking = (prefill?: any) => {
-    setDemoModalOpen({ type: 'booking', prefill });
+  const handleOpenBooking = (prefill?: {
+    roomId?: string;
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+  }) => {
+    setBookingPrefill(prefill);
+    setIsBookingOpen(true);
+  };
+
+  const handleBookingSuccess = (createdBooking: Booking) => {
+    setIsBookingOpen(false);
+    setNewBooking(createdBooking);
+    setIsSuccessOpen(true);
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   const handleOpenCheckIn = () => {
-    setDemoModalOpen({ type: 'checkin' });
+    setIsCheckInOutOpen(true);
+  };
+
+  const handleBookingUpdated = (_updatedBooking: Booking) => {
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   const handleOpenAdmin = () => {
-    setDemoModalOpen({ type: 'admin' });
+    setIsAdminModalOpen(true);
   };
 
   return (
@@ -33,9 +62,35 @@ function AppContent() {
         onOpenCheckInOutModal={handleOpenCheckIn}
         onOpenAdminLogin={handleOpenAdmin}
         onSelectBookingDetail={(booking) => setSelectedBooking(booking)}
+        refreshTrigger={refreshTrigger}
+        onStateLoaded={(state) => setPublicState(state)}
       />
 
-      {/* Booking Detail Modal (เมื่อคลิกที่บล็อกการจองบน Timeline) */}
+      {/* 1. Modal ฟอร์มจองห้องซ้อมดนตรี (Phase 7) */}
+      <BookingModal
+        isOpen={isBookingOpen}
+        onClose={() => setIsBookingOpen(false)}
+        onSuccess={handleBookingSuccess}
+        rooms={publicState?.rooms || []}
+        settings={publicState?.settings}
+        prefill={bookingPrefill}
+      />
+
+      {/* 2. Modal แสดงผลสำเร็จการจอง + QR Code (Phase 7) */}
+      <BookingSuccessModal
+        isOpen={isSuccessOpen}
+        onClose={() => setIsSuccessOpen(false)}
+        booking={newBooking}
+      />
+
+      {/* 3. Modal เช็คอิน / เช็คเอาต์ / ยกเลิกคิว (Phase 7) */}
+      <CheckInOutModal
+        isOpen={isCheckInOutOpen}
+        onClose={() => setIsCheckInOutOpen(false)}
+        onBookingUpdated={handleBookingUpdated}
+      />
+
+      {/* 4. Booking Detail Modal (เมื่อคลิกที่บล็อกการจองบน Timeline) */}
       <Modal
         isOpen={!!selectedBooking}
         onClose={() => setSelectedBooking(null)}
@@ -94,57 +149,24 @@ function AppContent() {
         )}
       </Modal>
 
-      {/* Placeholder Modal for Modal Flow in Phase 7/8 */}
+      {/* 5. Placeholder สำหรับ Admin Console (เตรียมพร้อมสำหรับ Phase 8) */}
       <Modal
-        isOpen={!!demoModalOpen}
-        onClose={() => setDemoModalOpen(null)}
-        title={
-          demoModalOpen?.type === 'booking'
-            ? 'ระบบจองห้องซ้อมดนตรี (Phase 7)'
-            : demoModalOpen?.type === 'checkin'
-            ? 'เช็คอิน / เช็คเอาต์ห้องซ้อม (Phase 7)'
-            : 'เข้าสู่ระบบผู้ดูแล (Admin Console - Phase 8)'
-        }
-        description="เตรียมพร้อมสำหรับเฟสถัดไป"
+        isOpen={isAdminModalOpen}
+        onClose={() => setIsAdminModalOpen(false)}
+        title="เข้าสู่ระบบผู้ดูแล (Admin Console)"
+        description="ระบบหลังบ้านสำหรับผู้ดูแลชมรมและอาจารย์ที่ปรึกษา"
       >
         <div className="space-y-4 py-2">
-          {demoModalOpen?.type === 'booking' && (
-            <div className="text-xs text-slate-600 space-y-2">
-              <p>
-                คุณได้เลือกช่วงเวลา: <strong>{demoModalOpen.prefill?.startTime || '08:00'} - {demoModalOpen.prefill?.endTime || '09:00'} น.</strong>
-              </p>
-              <p>
-                ห้อง: <strong>{demoModalOpen.prefill?.roomId || 'ห้องซ้อมรวม A'}</strong> วันที่: <strong>{demoModalOpen.prefill?.date}</strong>
-              </p>
-              <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-850 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-secondary flex-shrink-0" />
-                <span>ฟอร์มจองแบบ Stepper 3 ขั้นตอนเต็มรูปแบบจะถูกเปิดใช้งานใน <strong>PHASE 7</strong></span>
-              </div>
+          <div className="text-xs text-slate-600 space-y-2">
+            <p>ระบบหลังบ้านพร้อมแดชบอร์ดกราฟ KPI, สถิติ Heatmap และจัดการผู้รับอีเมลแจ้งเตือน</p>
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-850 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+              <span>หน้าต่างเข้าสู่ระบบและแดชบอร์ดแอดมินเต็มรูปแบบเตรียมเปิดใช้งานใน <strong>PHASE 8</strong></span>
             </div>
-          )}
-
-          {demoModalOpen?.type === 'checkin' && (
-            <div className="text-xs text-slate-600 space-y-2">
-              <p>ระบบค้นหาด้วยรหัสจอง (เช่น MB-2609-XXXX) พร้อมปุ่มเช็คอินสด เช็คเอาต์ และนับเวลาจริง</p>
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-850 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>โมดอลเช็คอิน/เช็คเอาต์/ยกเลิก จะถูกเปิดใช้งานใน <strong>PHASE 7</strong></span>
-              </div>
-            </div>
-          )}
-
-          {demoModalOpen?.type === 'admin' && (
-            <div className="text-xs text-slate-600 space-y-2">
-              <p>ระบบหลังบ้านพร้อมแดชบอร์ดกราฟ KPI, สถิติ Heatmap และจัดการผู้รับอีเมล</p>
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-850 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
-                <span>หน้า Admin Console เต็มรูปแบบจะถูกเชื่อมต่อใน <strong>PHASE 8</strong></span>
-              </div>
-            </div>
-          )}
+          </div>
 
           <div className="flex justify-end pt-2">
-            <Button size="sm" variant="primary" onClick={() => setDemoModalOpen(null)}>
+            <Button size="sm" variant="primary" onClick={() => setIsAdminModalOpen(false)}>
               รับทราบ
             </Button>
           </div>

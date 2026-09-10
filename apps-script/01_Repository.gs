@@ -24,14 +24,13 @@ function withLock(callback, timeoutMs) {
   var hasLock = false;
   
   try {
-    hasLock = lock.waitLock(timeoutMs);
+    hasLock = lock.tryLock(timeoutMs);
   } catch (e) {
-    Logger.log("LockService waitLock timeout หรือ error: " + e.message);
-    throw new Error("ระบบกำลังมีการประมวลผลการจองพร้อมกันจำนวนมาก กรุณาลองใหม่อีกครั้งใน 10 วินาที");
+    Logger.log("LockService tryLock error: " + e.message);
   }
 
   if (!hasLock) {
-    throw new Error("ไม่สามารถรับสิทธิ์การเขียนข้อมูลได้ (Lock Timeout) กรุณาลองใหม่อีกครั้ง");
+    throw new Error("ระบบกำลังมีการประมวลผลการจองพร้อมกันจำนวนมาก กรุณาลองใหม่อีกครั้ง");
   }
 
   try {
