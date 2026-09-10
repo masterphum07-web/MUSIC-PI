@@ -168,6 +168,7 @@ function AppContent() {
         isOpen={isCheckInOutOpen}
         onClose={() => setIsCheckInOutOpen(false)}
         onBookingUpdated={handleBookingUpdated}
+        bookings={publicState?.bookings || []}
       />
 
       {/* 4. Modal เข้าสู่ระบบผู้ดูแล Admin Login (Phase 8) */}

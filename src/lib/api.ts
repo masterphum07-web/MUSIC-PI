@@ -138,37 +138,49 @@ export async function createBooking(payload: {
   equipment?: string;
   _hp?: string;
 }): Promise<Booking> {
-  return callApi<Booking>({
-    action: 'createBooking',
-    payload,
-  });
+  return callApi<Booking>(
+    {
+      action: 'createBooking',
+      payload,
+    },
+    0 // ไม่ retry คำขอสร้างการจองเพื่อป้องกันการส่งข้อมูลซ้ำซ้อน
+  );
 }
 
 export async function lookupBooking(bookingCode: string, fullName: string): Promise<Booking> {
-  return callApi<Booking>({
-    action: 'lookupBooking',
-    payload: { booking_code: bookingCode, full_name: fullName },
-  });
+  return callApi<Booking>(
+    {
+      action: 'lookupBooking',
+      payload: { booking_code: bookingCode, full_name: fullName },
+    },
+    0
+  );
 }
 
 export async function checkIn(
   bookingCode: string,
   fullName: string
 ): Promise<{ success: boolean; message: string; booking: Booking }> {
-  return callApi<{ success: boolean; message: string; booking: Booking }>({
-    action: 'checkIn',
-    payload: { booking_code: bookingCode, full_name: fullName },
-  });
+  return callApi<{ success: boolean; message: string; booking: Booking }>(
+    {
+      action: 'checkIn',
+      payload: { booking_code: bookingCode, full_name: fullName },
+    },
+    0
+  );
 }
 
 export async function checkOut(
   bookingCode: string,
   fullName: string
 ): Promise<{ success: boolean; message: string; booking: Booking }> {
-  return callApi<{ success: boolean; message: string; booking: Booking }>({
-    action: 'checkOut',
-    payload: { booking_code: bookingCode, full_name: fullName },
-  });
+  return callApi<{ success: boolean; message: string; booking: Booking }>(
+    {
+      action: 'checkOut',
+      payload: { booking_code: bookingCode, full_name: fullName },
+    },
+    0
+  );
 }
 
 export async function cancelBooking(
@@ -176,10 +188,13 @@ export async function cancelBooking(
   fullName: string,
   reason: string
 ): Promise<{ success: boolean; message: string; booking: Booking }> {
-  return callApi<{ success: boolean; message: string; booking: Booking }>({
-    action: 'cancelBooking',
-    payload: { booking_code: bookingCode, full_name: fullName, reason },
-  });
+  return callApi<{ success: boolean; message: string; booking: Booking }>(
+    {
+      action: 'cancelBooking',
+      payload: { booking_code: bookingCode, full_name: fullName, reason },
+    },
+    0
+  );
 }
 
 // ==========================================

@@ -71,6 +71,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     message?: string;
   }>({ checked: true, available: true });
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submissionPhase, setSubmissionPhase] = useState<string>('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // กำหนดค่าเริ่มต้นตาม prefill เมื่อเปิด Modal
@@ -82,6 +83,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       setCurrentStep(1);
       setErrors({});
       setAcceptedTerms(false);
+      setSubmissionPhase('');
     }
   }, [isOpen, prefill]);
 
@@ -192,6 +194,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }
 
     setIsSubmitting(true);
+    setSubmissionPhase('กำลังส่งข้อมูลและตรวจสอบคิวว่าง...');
+
+    // ทยอยอัปเดตสเตตัสให้ผู้ใช้เห็นความคืบหน้าชัดเจน ไม่รู้สึกว่าหมุนค้าง
+    const timer1 = setTimeout(() => {
+      setSubmissionPhase('บันทึกคิวเรียบร้อย กำลังออกรหัสการจอง...');
+    }, 1500);
+
+    const timer2 = setTimeout(() => {
+      setSubmissionPhase('ออกรหัสสำเร็จ กำลังจัดส่งอีเมลและเตรียมบัตรคิว...');
+    }, 3200);
+
     try {
       const newBooking = await createBooking({
         room_id: roomId,
@@ -209,12 +222,35 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         _hp: honeypot,
       });
 
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      setSubmissionPhase('จองสำเร็จเรียบร้อย!');
+
+      // บันทึกการจองล่าสุดลง localStorage เพื่อนำไป Auto-fill ในหน้าเช็คอินได้ทันที (0ms)
+      try {
+        localStorage.setItem(
+          'wtk_last_booking',
+          JSON.stringify({
+            booking_code: newBooking.booking_code,
+            full_name: fullName.trim(),
+            room_id: newBooking.room_id,
+            booking_date: newBooking.booking_date,
+            start_time: newBooking.start_time,
+            end_time: newBooking.end_time,
+            timestamp: Date.now(),
+          })
+        );
+      } catch (e) {}
+
       toast.success('จองห้องซ้อมสำเร็จ!', `รหัสการจองของคุณคือ ${newBooking.booking_code}`);
       onSuccess(newBooking);
     } catch (err: any) {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
       toast.error('การจองไม่สำเร็จ', err.message || 'เกิดข้อผิดพลาดในการจอง กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsSubmitting(false);
+      setSubmissionPhase('');
     }
   };
 
@@ -671,7 +707,18 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </label>
             </div>
 
-            <div className="flex justify-between pt-3">
+            {/* Live Submission Progress Feedback */}
+            {isSubmitting && (
+              <div className="p-3.5 bg-blue-50/90 border border-blue-200 rounded-2xl flex items-center gap-3 animate-pulse shadow-sm">
+                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                <div className="text-xs">
+                  <span className="font-bold text-primary block">กำลังประมวลผลการจอง...</span>
+                  <span className="text-slate-600 text-[11px]">{submissionPhase}</span>
+                </div>
+              </div>
+            )}
+
+            <div className={`flex justify-between pt-3 ${isSubmitting ? 'pointer-events-none opacity-80' : ''}`}>
               <Button
                 variant="outline"
                 size="md"
@@ -688,7 +735,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 disabled={!acceptedTerms || isSubmitting}
                 className="font-bold px-8 shadow-md"
               >
-                ยืนยันการจองห้องซ้อมดนตรี 🎸
+                {isSubmitting ? 'กำลังบันทึกคิว...' : 'ยืนยันการจองห้องซ้อมดนตรี 🎸'}
               </Button>
             </div>
           </div>

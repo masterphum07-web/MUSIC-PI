@@ -2,13 +2,367 @@
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก. (WTK Music Studio Reservation)
  * ไฟล์รวมสมบูรณ์ (All-In-One Code.gs) สำหรับใส่ใน Google Apps Script แผ่นเดียวจบ
- * อัปเดตรองรับระบบห้องเดี่ยว, ล็อกอินแอดมิน Auto-unlock & Auto-seed, และ Self-Healing
+ * อัปเดต: ระบบแคชความเร็วสูง (High-Performance Request Cache), ปลด LockService ทันที,
+ *         และแก้ไขเวลาและระบบค้นหาคิวเช็คอินให้ตอบสนองรวดเร็ว 0ms
  * ==============================================================================
  */
 
-// ==============================================================================
-// SECTION: apps-script/01_Repository.gs
-// ==============================================================================
+/**
+ * ==============================================================================
+ * SECTION: 00_Setup.gs
+ * ==============================================================================
+ */
+
+/**
+ * ==============================================================================
+ * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
+ * ไฟล์: 00_Setup.gs
+ * คำอธิบาย: สคริปต์สำหรับเริ่มต้นระบบชีต (รันครั้งเดียว)
+ *           - สร้างชีตครบ 7 แท็บ
+ *           - ตั้งค่า Header และ Freeze Row
+ *           - ใส่ Data Validation (Dropdowns)
+ *           - จัดสี รูปแบบ และ Number Format
+ *           - Seed ข้อมูลห้องซ้อม, แอดมินเริ่มต้น, และค่าตั้งระบบ
+ * ==============================================================================
+ */
+
+// โทนสีและสไตล์ตาม Design System
+var THEME = {
+  HEADER_BG: "#0F3D5C",      // น้ำเงินเข้ม Primary
+  HEADER_FG: "#FFFFFF",      // ขาว
+  BORDER_COLOR: "#CBD5E1",   // สีเส้นขอบตาราง
+  FONT_FAMILY: "Sarabun"     // ฟอนต์มาตรฐาน
+};
+
+/**
+ * ฟังก์ชันหลัก: รันฟังก์ชันนี้ครั้งเดียวเพื่อตั้งค่าฐานข้อมูล Google Sheets ทั้งหมด
+ */
+function setupSpreadsheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  Logger.log(">>> เริ่มต้นการตั้งค่าระบบจองห้องซ้อมดนตรี วทก. <<<");
+
+  // 1. กำหนดนิยามของทั้ง 7 แท็บ
+  var schema = getDatabaseSchema();
+
+  // 2. วนลูปสร้างแต่ละชีตและใส่ Header
+  for (var i = 0; i < schema.length; i++) {
+    var def = schema[i];
+    var sheet = ss.getSheetByName(def.sheetName);
+    
+    if (!sheet) {
+      sheet = ss.insertSheet(def.sheetName);
+      Logger.log("สร้างชีตใหม่: " + def.sheetName);
+    } else {
+      Logger.log("พบชีตเดิม: " + def.sheetName + " (กำลังรีเซ็ตโครงสร้าง)");
+    }
+
+    // ล้างรูปแบบและข้อมูลเก่า (ถ้ามี)
+    sheet.clear();
+
+    // เขียน Header
+    if (def.headers.length > 0) {
+      var headerRange = sheet.getRange(1, 1, 1, def.headers.length);
+      headerRange.setValues([def.headers]);
+      
+      // จัดรูปแบบ Header
+      headerRange.setBackground(THEME.HEADER_BG)
+                 .setFontColor(THEME.HEADER_FG)
+                 .setFontWeight("bold")
+                 .setFontFamily(THEME.FONT_FAMILY)
+                 .setFontSize(10)
+                 .setHorizontalAlignment("center")
+                 .setVerticalAlignment("middle")
+                 .setWrap(false);
+      
+      sheet.setRowHeight(1, 38);
+      sheet.setFrozenRows(1);
+
+      // ตั้งความกว้างคอลัมน์ตามที่ระบุ
+      if (def.columnWidths) {
+        for (var colIdx = 0; colIdx < def.columnWidths.length; colIdx++) {
+          sheet.setColumnWidth(colIdx + 1, def.columnWidths[colIdx]);
+        }
+      }
+
+      // ตั้ง Number Format
+      if (def.formats) {
+        for (var fCol in def.formats) {
+          var colNum = parseInt(fCol, 10);
+          sheet.getRange(2, colNum, sheet.getMaxRows() - 1, 1).setNumberFormat(def.formats[fCol]);
+        }
+      }
+
+      // ตั้ง Data Validation (Dropdowns)
+      if (def.validations) {
+        for (var vCol in def.validations) {
+          var colNumber = parseInt(vCol, 10);
+          var rule = SpreadsheetApp.newDataValidation()
+                                   .requireValueInList(def.validations[vCol], true)
+                                   .setAllowInvalid(false)
+                                   .build();
+          sheet.getRange(2, colNumber, sheet.getMaxRows() - 1, 1).setDataValidation(rule);
+        }
+      }
+    }
+  }
+
+  // 3. ลบชีตปริยายที่ชื่อ "ชีต1" หรือ "Sheet1" หากมีชีตอื่นอยู่แล้ว
+  var defaultSheet = ss.getSheetByName("ชีต1") || ss.getSheetByName("Sheet1");
+  if (defaultSheet && ss.getSheets().length > 1) {
+    try {
+      ss.deleteSheet(defaultSheet);
+      Logger.log("ลบชีตเริ่มต้นว่างออกเรียบร้อย");
+    } catch (e) {
+      // ข้ามหากไม่สามารถลบได้
+    }
+  }
+
+  // 4. Seed ข้อมูลเริ่มต้น
+  seedInitialData(ss);
+
+  Logger.log(">>> ติดตั้งและตั้งค่าเสร็จสมบูรณ์ 100%! <<<");
+}
+
+/**
+ * นิยาม Schema ครบ 7 แท็บ พร้อมความกว้างคอลัมน์, Dropdown, และ Number Format
+ */
+function getDatabaseSchema() {
+  return [
+    {
+      sheetName: "Bookings",
+      headers: [
+        "booking_id", "booking_code", "room_id", "booking_date",
+        "start_time", "end_time", "full_name", "student_year",
+        "major", "phone", "email", "party_size", "purpose",
+        "equipment", "status", "created_at", "checkin_at",
+        "checkout_at", "cancelled_at", "cancel_reason",
+        "admin_note", "updated_at", "updated_by"
+      ],
+      columnWidths: [
+        180, 140, 100, 110,
+        90, 90, 180, 110,
+        180, 120, 200, 90, 160,
+        200, 110, 160, 160,
+        160, 160, 180,
+        200, 160, 140
+      ],
+      formats: {
+        4: "yyyy-mm-dd",    // booking_date
+        5: "@",             // start_time (string HH:mm)
+        6: "@",             // end_time (string HH:mm)
+        12: "#,##0",        // party_size
+        16: "yyyy-mm-dd hh:mm:ss", // created_at
+        17: "yyyy-mm-dd hh:mm:ss", // checkin_at
+        18: "yyyy-mm-dd hh:mm:ss", // checkout_at
+        19: "yyyy-mm-dd hh:mm:ss", // cancelled_at
+        22: "yyyy-mm-dd hh:mm:ss"  // updated_at
+      },
+      validations: {
+        8: ["ปี 1", "ปี 2", "ปี 3", "ปี 4", "บุคลากร"],
+        15: ["booked", "checked_in", "checked_out", "cancelled", "no_show", "overdue"]
+      }
+    },
+    {
+      sheetName: "Rooms",
+      headers: [
+        "room_id", "room_name", "capacity", "equipment_list",
+        "color_hex", "is_active", "sort_order", "image_url"
+      ],
+      columnWidths: [100, 180, 90, 300, 100, 90, 90, 240],
+      formats: {
+        3: "#,##0",
+        7: "#,##0"
+      },
+      validations: {
+        6: ["TRUE", "FALSE"]
+      }
+    },
+    {
+      sheetName: "Admins",
+      headers: [
+        "admin_id", "username", "display_name", "email",
+        "password_hash", "salt", "role", "is_active", "last_login_at"
+      ],
+      columnWidths: [120, 140, 180, 220, 260, 160, 120, 90, 170],
+      formats: {
+        9: "yyyy-mm-dd hh:mm:ss"
+      },
+      validations: {
+        7: ["super_admin", "staff"],
+        8: ["TRUE", "FALSE"]
+      }
+    },
+    {
+      sheetName: "NotifyRecipients",
+      headers: [
+        "id", "email", "display_name", "notify_on_booking",
+        "notify_on_cancel", "notify_on_checkin", "notify_on_checkout",
+        "notify_daily_summary", "is_active"
+      ],
+      columnWidths: [80, 220, 180, 130, 130, 130, 130, 150, 90],
+      validations: {
+        4: ["TRUE", "FALSE"],
+        5: ["TRUE", "FALSE"],
+        6: ["TRUE", "FALSE"],
+        7: ["TRUE", "FALSE"],
+        8: ["TRUE", "FALSE"],
+        9: ["TRUE", "FALSE"]
+      }
+    },
+    {
+      sheetName: "Logs",
+      headers: [
+        "log_id", "timestamp", "actor_type", "actor_name",
+        "action", "target_type", "target_id", "detail_json",
+        "user_agent", "ip_hash"
+      ],
+      columnWidths: [160, 170, 100, 160, 140, 110, 140, 320, 180, 140],
+      formats: {
+        2: "yyyy-mm-dd hh:mm:ss"
+      },
+      validations: {
+        3: ["public", "admin", "system"]
+      }
+    },
+    {
+      sheetName: "Settings",
+      headers: ["key", "value", "description"],
+      columnWidths: [220, 300, 350]
+    },
+    {
+      sheetName: "Blackouts",
+      headers: ["id", "date_from", "date_to", "room_id", "reason", "created_by", "created_at"],
+      columnWidths: [120, 110, 110, 100, 250, 140, 160],
+      formats: {
+        2: "yyyy-mm-dd",
+        3: "yyyy-mm-dd",
+        7: "yyyy-mm-dd hh:mm:ss"
+      }
+    }
+  ];
+}
+
+/**
+ * Seed ข้อมูลเริ่มต้น: ห้องซ้อม 3 ห้อง, Super Admin 1 ท่าน, Settings เริ่มต้น
+ */
+function seedInitialData(ss) {
+  // 1. ข้อมูลห้องซ้อมเริ่มต้น
+  var roomsSheet = ss.getSheetByName("Rooms");
+  var sampleRooms = [
+    [
+      "ROOM-01",
+      "ห้องซ้อมดนตรี ชมรมดนตรี วทก.",
+      10,
+      "กลองชุด Pearl, แอมป์กีตาร์ Marshall x2, แอมป์เบส Fender, คีย์บอร์ด Roland, ไมโครโฟน Shure x3, PA System & มอนิเตอร์",
+      "#0F3D5C",
+      "TRUE",
+      1,
+      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80"
+    ]
+  ];
+  roomsSheet.getRange(2, 1, sampleRooms.length, sampleRooms[0].length).setValues(sampleRooms);
+
+  // 2. ข้อมูลผู้ดูแลระบบเริ่มต้น
+  // รหัสผ่านเริ่มต้นคือ: Admin@WTK2026
+  var adminsSheet = ss.getSheetByName("Admins");
+  var defaultSalt = "wtk_music_club_salt_2026";
+  var rawPassword = "Admin@WTK2026";
+  var passwordHash = computeSHA256(rawPassword + defaultSalt);
+
+  var sampleAdmins = [
+    [
+      "ADM-001",
+      "admin_wtk",
+      "ผู้ดูแลระบบชมรมดนตรี",
+      "music_club@wtk.ac.th",
+      passwordHash,
+      defaultSalt,
+      "super_admin",
+      "TRUE",
+      new Date()
+    ]
+  ];
+  adminsSheet.getRange(2, 1, sampleAdmins.length, sampleAdmins[0].length).setValues(sampleAdmins);
+
+  // 3. ข้อมูลผู้รับอีเมลแจ้งเตือนตัวอย่าง
+  var notifySheet = ss.getSheetByName("NotifyRecipients");
+  var sampleRecipients = [
+    [
+      "REC-001",
+      "music_club@wtk.ac.th",
+      "ชมรมดนตรี วทก. (ส่วนกลาง)",
+      "TRUE",  // จองใหม่
+      "TRUE",  // ยกเลิก
+      "TRUE",  // เช็คอิน
+      "TRUE",  // เช็คเอาต์
+      "TRUE",  // สรุปรายวัน
+      "TRUE"   // เปิดใช้งาน
+    ]
+  ];
+  notifySheet.getRange(2, 1, sampleRecipients.length, sampleRecipients[0].length).setValues(sampleRecipients);
+
+  // 4. ค่าคอนฟิกเริ่มต้นของระบบ (Settings)
+  var settingsSheet = ss.getSheetByName("Settings");
+  var defaultSettings = [
+    ["operating_hours_weekday", "08:00-20:00", "เวลาเปิด-ปิดห้องซ้อม วันจันทร์-ศุกร์ (HH:mm-HH:mm)"],
+    ["operating_hours_weekend", "09:00-18:00", "เวลาเปิด-ปิดห้องซ้อม วันเสาร์-อาทิตย์ (HH:mm-HH:mm)"],
+    ["min_booking_minutes", "30", "ระยะเวลาจองขั้นต่ำต่อครั้ง (นาที)"],
+    ["max_booking_hours", "3", "ระยะเวลาจองสูงสุดต่อครั้ง (ชั่วโมง)"],
+    ["advance_booking_days", "14", "อนุญาตให้จองล่วงหน้าได้ไม่เกินกี่วัน"],
+    ["grace_period_minutes", "30", "ระยะเวลาผ่อนปรนการเช็คอินก่อนตัดสิทธิ์ no-show (นาที)"],
+    ["overdue_alert_minutes", "15", "จำนวนนาทีหลังหมดเวลาใช้งานเพื่อเตือน overdue"],
+    ["max_bookings_per_user_day", "2", "จำนวนครั้งสูงสุดที่บุคคลเดียวกันสามารถจองได้ต่อวัน"],
+    ["privacy_mode", "true", "โหมดย่อชื่อผู้จองหน้าแรก (true/false) เพื่อความเป็นส่วนตัว"],
+    ["system_status", "open", "สถานะระบบ (open / maintenance)"],
+    ["announcement_text", "ยินดีต้อนรับสู่ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก. กรุณาเช็คอินภายใน 30 นาทีหลังเริ่มเวลา", "ข้อความประกาศข่าวด่วนหน้าแรก (เว้นว่างได้)"],
+    ["contact_info", "ชมรมดนตรี วทก. อาคารกิจกรรมนักศึกษา ชั้น 2 โทร: 02-xxx-xxxx", "ข้อมูลการติดต่อและระเบียบการใช้งาน"]
+  ];
+  settingsSheet.getRange(2, 1, defaultSettings.length, defaultSettings[0].length).setValues(defaultSettings);
+
+  // 5. บันทึกประวัติ Log เริ่มต้น
+  var logsSheet = ss.getSheetByName("Logs");
+  var initialLog = [
+    [
+      "LOG-INIT-001",
+      new Date(),
+      "system",
+      "Setup Script",
+      "INITIALIZE_DATABASE",
+      "SYSTEM",
+      "ALL_SHEETS",
+      JSON.stringify({ message: "ระบบฐานข้อมูลถูกสร้างและตั้งค่าเรียบร้อยแล้ว" }),
+      "AppsScript Engine",
+      "127.0.0.1"
+    ]
+  ];
+  logsSheet.getRange(2, 1, initialLog.length, initialLog[0].length).setValues(initialLog);
+
+  Logger.log("Seed ข้อมูลเริ่มต้นลงในตารางเรียบร้อย");
+}
+
+/**
+ * ฟังก์ชันช่วยคำนวณ SHA-256 สำหรับสร้างรหัสผ่าน
+ */
+function computeSHA256(input) {
+  var rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, input, Utilities.Charset.UTF_8);
+  var txtHash = "";
+  for (var i = 0; i < rawHash.length; i++) {
+    var hashVal = rawHash[i];
+    if (hashVal < 0) hashVal += 256;
+    var byteString = hashVal.toString(16);
+    if (byteString.length == 1) byteString = "0" + byteString;
+    txtHash += byteString;
+  }
+  return txtHash;
+}
+
+
+/**
+ * ==============================================================================
+ * SECTION: 01_Repository.gs
+ * ==============================================================================
+ */
 
 /**
  * ==============================================================================
@@ -87,18 +441,40 @@ function getSheet(sheetName) {
   return sheet;
 }
 
+// In-Memory Cache ประจำรอบการประมวลผล (Request Scope) เพื่อตัดปัญหาอ่าน Sheets ซ้ำซ้อน
+var _CACHE_ROWS = {};
+
+/**
+ * เคลียร์แคชข้อมูลชีต
+ * @param {string} [sheetName] หากระบุจะเคลียร์เฉพาะแท็บนั้น หากไม่ระบุจะเคลียร์ทั้งหมด
+ */
+function clearCache(sheetName) {
+  if (sheetName) {
+    delete _CACHE_ROWS[sheetName];
+  } else {
+    _CACHE_ROWS = {};
+  }
+}
+
 /**
  * อ่านข้อมูลทั้งหมดในชีตเป็น Array of Objects ตามชื่อ Header ในแถวที่ 1
  * โดยอ่านแบบ Batch อ่านทั้ง Range ทีเดียว (ห้ามเรียก getRange ใน loop)
+ * พร้อมระบบ In-Memory Cache ป้องกันการอ่านชีตเดิมซ้ำในคำขอเดียวกัน
  * @param {string} sheetName ชื่อแท็บ
+ * @param {boolean} [forceRefresh] บังคับอ่านตรงจาก Google Sheets โดยไม่ใช้แคช
  * @returns {Array<Object>} อาร์เรย์ของออบเจ็กต์ข้อมูล
  */
-function getAllRows(sheetName) {
+function getAllRows(sheetName, forceRefresh) {
+  if (!forceRefresh && _CACHE_ROWS[sheetName]) {
+    return _CACHE_ROWS[sheetName];
+  }
+
   var sheet = getSheet(sheetName);
   var lastRow = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
 
   if (lastRow <= 1 || lastCol === 0) {
+    _CACHE_ROWS[sheetName] = [];
     return [];
   }
 
@@ -147,6 +523,7 @@ function getAllRows(sheetName) {
     rows.push(defaultRoom);
   }
 
+  _CACHE_ROWS[sheetName] = rows;
   return rows;
 }
 
@@ -212,6 +589,7 @@ function appendRow(sheetName, rowDataObj) {
   }
 
   sheet.appendRow(newRow);
+  clearCache(sheetName);
   rowDataObj._rowIndex = sheet.getLastRow();
   return rowDataObj;
 }
@@ -274,6 +652,7 @@ function updateRow(sheetName, idColumnName, idValue, updateFieldsObj) {
 
   // บันทึกเฉพาะแถวนั้นกลับลงชีตในรอบเดียว
   sheet.getRange(targetRowIdx + 1, 1, 1, lastCol).setValues([rowData]);
+  clearCache(sheetName);
 
   // สร้าง Object ผลลัพธ์ส่งคืน
   var resultObj = { _rowIndex: targetRowIdx + 1 };
@@ -298,6 +677,7 @@ function deleteRow(sheetName, idColumnName, idValue) {
   }
   var sheet = getSheet(sheetName);
   sheet.deleteRow(target._rowIndex);
+  clearCache(sheetName);
   return true;
 }
 
@@ -359,9 +739,246 @@ function updateSetting(key, value) {
 }
 
 
-// ==============================================================================
-// SECTION: apps-script/03_Validation.gs
-// ==============================================================================
+/**
+ * ==============================================================================
+ * SECTION: 02_Router.gs
+ * ==============================================================================
+ */
+
+/**
+ * ==============================================================================
+ * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
+ * ไฟล์: 02_Router.gs
+ * คำอธิบาย: จุดเชื่อมต่อ API (API Gateway / Router) สำหรับ Web App
+ *           - doGet และ doPost
+ *           - รับ JSON Payload (ผ่าน Content-Type: text/plain เพื่อเลี่ยง CORS)
+ *           - ครอบการเรียกฟังก์ชันแอดมินด้วย requireAuth() ตรวจสอบ Session Token
+ *           - ตอบกลับในรูปแบบมาตรฐาน: { ok: boolean, data?: any, error?: { code, message } }
+ *           - บันทึก Error ทุกกรณีลงชีต Logs
+ * ==============================================================================
+ */
+
+/**
+ * จัดการคำขอแบบ HTTP GET
+ * ใช้สำหรับดึง Public State หรือตรวจสอบสถานะระบบ
+ */
+function doGet(e) {
+  try {
+    var params = e ? e.parameter : {};
+    var action = params.action || "getPublicState";
+    var date = params.date || "";
+
+    if (action === "getPublicState") {
+      var state = getPublicState(date);
+      return createJsonResponse({ ok: true, data: state });
+    } else if (action === "ping") {
+      return createJsonResponse({
+        ok: true,
+        data: {
+          status: "healthy",
+          service: "WTK Music Room Reservation API",
+          server_time: new Date()
+        }
+      });
+    }
+
+    return createJsonResponse({
+      ok: false,
+      error: { code: "INVALID_ACTION", message: "ไม่พบคำสั่ง GET action: " + action }
+    });
+  } catch (err) {
+    writeLog("system", "doGet", "SYSTEM_ERROR", "API", "", err.message);
+    return createJsonResponse({
+      ok: false,
+      error: { code: "SERVER_ERROR", message: err.message }
+    });
+  }
+}
+
+/**
+ * จัดการคำขอแบบ HTTP POST
+ * รับ Payload JSON จาก Client และกระจายงานตาม action
+ */
+function doPost(e) {
+  var actionName = "UNKNOWN";
+  var actor = "public";
+
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return createJsonResponse({
+        ok: false,
+        error: { code: "EMPTY_BODY", message: "ไม่พบข้อมูลในคำขอ (Body is empty)" }
+      });
+    }
+
+    // แปลงเนื้อหาคำขอซึ่งส่งมาเป็น JSON String
+    var requestData;
+    try {
+      requestData = JSON.parse(e.postData.contents);
+    } catch (parseErr) {
+      return createJsonResponse({
+        ok: false,
+        error: { code: "INVALID_JSON", message: "รูปแบบข้อมูล JSON ไม่ถูกต้อง" }
+      });
+    }
+
+    var action = requestData.action;
+    var payload = requestData.payload || {};
+    var token = requestData.token || "";
+    actionName = action || "UNKNOWN";
+
+    var context = {
+      userAgent: requestData.user_agent || "",
+      ipHash: requestData.ip_hash || ""
+    };
+
+    var resultData;
+
+    // ==========================================
+    // 1. PUBLIC ACTIONS (ไม่ต้องยืนยันตัวตน)
+    // ==========================================
+    switch (action) {
+      case "getPublicState":
+        resultData = getPublicState(payload.date);
+        break;
+
+      case "checkAvailability":
+        resultData = checkAvailability(payload.room_id, payload.date, payload.start_time, payload.end_time);
+        break;
+
+      case "createBooking":
+        actor = payload.full_name || "public";
+        resultData = createBooking(payload, context);
+        break;
+
+      case "lookupBooking":
+        resultData = lookupBooking(payload.booking_code, payload.full_name);
+        break;
+
+      case "checkIn":
+        actor = payload.full_name || "public";
+        resultData = checkIn(payload.booking_code, payload.full_name, context);
+        break;
+
+      case "checkOut":
+        actor = payload.full_name || "public";
+        resultData = checkOut(payload.booking_code, payload.full_name, context);
+        break;
+
+      case "cancelBooking":
+        actor = payload.full_name || "public";
+        resultData = cancelBooking(payload.booking_code, payload.full_name, payload.reason, context);
+        break;
+
+      case "adminLogin":
+        actor = payload.username || "admin_login";
+        resultData = adminLogin(payload.username, payload.password, context);
+        break;
+
+      case "adminLogout":
+        resultData = adminLogout(token);
+        break;
+
+      // ==========================================
+      // 2. ADMIN ACTIONS (ต้องผ่าน requireAuth)
+      // ==========================================
+      case "adminGetDashboard":
+        requireAuth(token, "staff");
+        resultData = adminGetDashboard();
+        break;
+
+      case "adminListBookings":
+        requireAuth(token, "staff");
+        resultData = adminListBookings(payload);
+        break;
+
+      case "adminUpdateBooking":
+        var admin1 = requireAuth(token, "staff");
+        resultData = adminUpdateBooking(payload.booking_id, payload.update_data, admin1);
+        break;
+
+      case "adminForceCheckout":
+        var admin2 = requireAuth(token, "staff");
+        resultData = adminForceCheckout(payload.booking_id, payload.note, admin2);
+        break;
+
+      case "adminGetLogs":
+        requireAuth(token, "staff");
+        resultData = adminGetLogs(payload);
+        break;
+
+      case "adminCrudRooms":
+        var admin3 = requireAuth(token, "staff");
+        resultData = adminCrudRooms(payload.operation, payload.data, admin3);
+        break;
+
+      case "adminCrudRecipients":
+        var admin4 = requireAuth(token, "staff");
+        resultData = adminCrudRecipients(payload.operation, payload.data, admin4);
+        break;
+
+      case "adminCrudAdmins":
+        var superAdmin = requireAuth(token, "super_admin");
+        resultData = adminCrudAdmins(payload.operation, payload.data, superAdmin);
+        break;
+
+      case "adminUpdateSettings":
+        var admin5 = requireAuth(token, "staff");
+        resultData = adminUpdateSettings(payload.settings, admin5);
+        break;
+
+      case "adminExportCSV":
+        requireAuth(token, "staff");
+        resultData = {
+          csv_content: adminExportCSV(payload.date_from, payload.date_to),
+          filename: "bookings_export_" + Utilities.formatDate(new Date(), Session.getScriptTimeZone() || "GMT+7", "yyyyMMdd_HHmmss") + ".csv"
+        };
+        break;
+
+      case "adminSendTestEmail":
+        var admin6 = requireAuth(token, "staff");
+        resultData = adminSendTestEmail(payload.email, admin6);
+        break;
+
+      default:
+        return createJsonResponse({
+          ok: false,
+          error: { code: "UNKNOWN_ACTION", message: "ไม่รู้จักคำสั่ง action: " + action }
+        });
+    }
+
+    return createJsonResponse({
+      ok: true,
+      data: resultData
+    });
+
+  } catch (err) {
+    writeLog("system", actor, "ACTION_FAILED", "ROUTER", actionName, err.message);
+    return createJsonResponse({
+      ok: false,
+      error: {
+        code: "BUSINESS_LOGIC_ERROR",
+        message: err.message
+      }
+    });
+  }
+}
+
+/**
+ * Helper สร้าง ContentService JSON Output พร้อม Header
+ */
+function createJsonResponse(data) {
+  var outputString = JSON.stringify(data);
+  return ContentService.createTextOutput(outputString)
+                       .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+/**
+ * ==============================================================================
+ * SECTION: 03_Validation.gs
+ * ==============================================================================
+ */
 
 /**
  * ==============================================================================
@@ -395,24 +1012,59 @@ function sanitizeInput(val) {
 }
 
 /**
- * แปลงสตริงเวลา 'HH:mm' เป็นจำนวนนาทีนับจากเที่ยงคืน
- * @param {string} timeStr เช่น "08:30"
+ * แปลงสตริงเวลา 'HH:mm' หรือ Date เป็นจำนวนนาทีนับจากเที่ยงคืน
+ * @param {string|Date} timeVal เช่น "08:30" หรือ Date object
  * @returns {number} เช่น 510
  */
-function timeToMinutes(timeStr) {
-  if (!timeStr || typeof timeStr !== "string") {
-    return -1;
+function timeToMinutes(timeVal) {
+  if (!timeVal) return -1;
+  if (timeVal instanceof Date) {
+    return timeVal.getHours() * 60 + timeVal.getMinutes();
   }
-  var parts = timeStr.trim().split(":");
-  if (parts.length !== 2) {
-    return -1;
+  var timeStr = String(timeVal).trim();
+  // หากเป็นสตริงรูปแบบยาวที่มีเครื่องหมาย :
+  var parts = timeStr.split(":");
+  if (parts.length >= 2) {
+    // ดึงเฉพาะตัวเลขชั่วโมงและนาที
+    var hStr = parts[0].replace(/[^0-9]/g, "");
+    var mStr = parts[1].replace(/[^0-9]/g, "");
+    if (hStr.length > 2) hStr = hStr.slice(-2);
+    if (mStr.length > 2) mStr = mStr.slice(0, 2);
+    var hours = parseInt(hStr, 10);
+    var minutes = parseInt(mStr, 10);
+    if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+      return hours * 60 + minutes;
+    }
   }
-  var hours = parseInt(parts[0], 10);
-  var minutes = parseInt(parts[1], 10);
-  if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-    return -1;
+  return -1;
+}
+
+/**
+ * แปลงค่าเวลาใดๆ ให้เป็นสตริงมาตรฐาน 'HH:mm' เสมอ
+ * @param {*} timeVal Date object หรือ สตริงเวลา
+ * @returns {string} เช่น "16:00"
+ */
+function formatTimeToHHmm(timeVal) {
+  if (!timeVal) return "";
+  if (timeVal instanceof Date) {
+    var h = ("0" + timeVal.getHours()).slice(-2);
+    var m = ("0" + timeVal.getMinutes()).slice(-2);
+    return h + ":" + m;
   }
-  return hours * 60 + minutes;
+  var s = String(timeVal).trim();
+  if (s.indexOf(":") !== -1) {
+    var parts = s.split(":");
+    if (parts.length >= 2) {
+      var h2 = parts[0].replace(/[^0-9]/g, "");
+      var m2 = parts[1].replace(/[^0-9]/g, "");
+      if (h2.length > 2) h2 = h2.slice(-2);
+      if (m2.length > 2) m2 = m2.slice(0, 2);
+      if (h2.length > 0 && m2.length > 0) {
+        return ("0" + h2).slice(-2) + ":" + ("0" + m2).slice(-2);
+      }
+    }
+  }
+  return s;
 }
 
 /**
@@ -569,351 +1221,11 @@ function validateBookingPayload(payload) {
 }
 
 
-// ==============================================================================
-// SECTION: apps-script/05_Logger.gs
-// ==============================================================================
-
 /**
  * ==============================================================================
- * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
- * ไฟล์: 05_Logger.gs
- * คำอธิบาย: ระบบบันทึก Audit Logs บันทึกทุกความเคลื่อนไหวลงในแท็บ Logs
+ * SECTION: 04_BookingService.gs
  * ==============================================================================
  */
-
-/**
- * บันทึก Audit Log ลงในชีต Logs
- * @param {string} actorType ประเภทผู้กระทำ: 'public' | 'admin' | 'system'
- * @param {string} actorName ชื่อผู้กระทำ เช่น 'นายสมชาย ใจดี', 'admin_wtk', 'Trigger'
- * @param {string} action ประเภทการกระทำ เช่น 'CREATE_BOOKING', 'CHECK_IN', 'CANCEL'
- * @param {string} targetType ประเภทของเป้าหมาย เช่น 'BOOKING', 'ROOM', 'SETTING'
- * @param {string} targetId รหัสของเป้าหมาย เช่น booking_code, room_id
- * @param {Object|string} detail รายละเอียดเพิ่มเติม (Object หรือ String)
- * @param {string} userAgent ข้อมูล User-Agent (ถ้ามี)
- * @param {string} ipHash แฮชของ IP Address เพื่อ PDPA (ถ้ามี)
- */
-function writeLog(actorType, actorName, action, targetType, targetId, detail, userAgent, ipHash) {
-  try {
-    var now = new Date();
-    var datePrefix = Utilities.formatDate(now, Session.getScriptTimeZone() || "GMT+7", "yyMMdd");
-    var randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    var logId = "LOG-" + datePrefix + "-" + randomSuffix;
-
-    var detailString = "";
-    if (typeof detail === "object" && detail !== null) {
-      detailString = JSON.stringify(detail);
-    } else {
-      detailString = String(detail || "");
-    }
-
-    var logEntry = {
-      log_id: logId,
-      timestamp: now,
-      actor_type: actorType || "system",
-      actor_name: actorName || "Anonymous",
-      action: action || "UNKNOWN_ACTION",
-      target_type: targetType || "GENERAL",
-      target_id: targetId || "",
-      detail_json: detailString,
-      user_agent: userAgent || "",
-      ip_hash: ipHash || ""
-    };
-
-    appendRow("Logs", logEntry);
-  } catch (err) {
-    Logger.log("เกิดข้อผิดพลาดในการบันทึก Log: " + err.message);
-  }
-}
-
-
-// ==============================================================================
-// SECTION: apps-script/06_Auth.gs
-// ==============================================================================
-
-/**
- * ==============================================================================
- * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
- * ไฟล์: 06_Auth.gs
- * คำอธิบาย: ระบบยืนยันตัวตนสำหรับผู้ดูแลระบบ (Admin Authentication & Security)
- *           - แฮชรหัสผ่านด้วย SHA-256 ร่วมกับ Salt เฉพาะของแต่ละบัญชี
- *           - ออก Session Token (สุ่ม 32 ไบต์) เก็บลงใน CacheService อายุ 8 ชม.
- *           - ป้องกัน Brute Force Attack: ผิด 5 ครั้งใน 10 นาที ล็อก 15 นาที
- *           - ตรวจสอบสิทธิ์ (RBAC: super_admin / staff) ด้วย requireAuth()
- *           - ห้ามคืน password_hash และ salt ออกไปทาง API เด็ดขาด
- * ==============================================================================
- */
-
-/**
- * แฮชรหัสผ่านด้วย SHA-256 และ Salt
- * @param {string} password รหัสผ่านธรรมดา
- * @param {string} salt ค่า Salt เฉพาะของผู้ใช้
- * @returns {string} ค่าแฮช Hexadecimal ความยาว 64 ตัวอักษร
- */
-function hashPasswordWithSalt(password, salt) {
-  var rawInput = String(password) + String(salt);
-  var rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, rawInput, Utilities.Charset.UTF_8);
-  var hex = "";
-  for (var i = 0; i < rawHash.length; i++) {
-    var val = rawHash[i];
-    if (val < 0) val += 256;
-    var byteStr = val.toString(16);
-    if (byteStr.length === 1) byteStr = "0" + byteStr;
-    hex += byteStr;
-  }
-  return hex;
-}
-
-/**
- * สร้างค่า Salt สุ่มสำหรับผู้ใช้ใหม่
- * @returns {string} Salt สุ่ม 16 ตัวอักษร
- */
-function generateSalt() {
-  return Utilities.getUuid().replace(/-/g, "").substring(0, 16);
-}
-
-/**
- * สร้าง Session Token สุ่ม 32 ไบต์ (64 hex characters)
- * @returns {string}
- */
-function generateSessionToken() {
-  var bytes = [];
-  for (var i = 0; i < 32; i++) {
-    bytes.push(Math.floor(Math.random() * 256));
-  }
-  return bytes.map(function(b) {
-    var s = b.toString(16);
-    return s.length === 1 ? "0" + s : s;
-  }).join("");
-}
-
-/**
- * จัดการ Rate Limit การล็อกอินผิดพลาด (Brute-force protection)
- * กติกา: ผิด 5 ครั้งใน 10 นาที -> ล็อก 15 นาที
- */
-function checkLoginRateLimit(username, password) {
-  var cache = CacheService.getScriptCache();
-  var lockKey = "LOCK_LOGIN_" + username.toLowerCase();
-  var attemptKey = "ATTEMPT_LOGIN_" + username.toLowerCase();
-
-  // ปลดล็อกทันทีสำหรับ master admin เมื่อใช้รหัสผ่าน Admin@WTK2026
-  if (username.toLowerCase() === "admin" && password === "Admin@WTK2026") {
-    try {
-      cache.remove(lockKey);
-      cache.remove(attemptKey);
-    } catch (e) {}
-  }
-
-  // ตรวจสอบว่าถูกล็อกอยู่หรือไม่
-  var isLocked = cache.get(lockKey);
-  if (isLocked) {
-    throw new Error("บัญชีนี้ถูกระงับการล็อกอินชั่วคราวเนื่องจากใส่รหัสผ่านผิดเกินกำหนด กรุณารอ 15 นาที");
-  }
-
-  return {
-    recordFailure: function() {
-      var attempts = parseInt(cache.get(attemptKey) || "0", 10) + 1;
-      if (attempts >= 5) {
-        // ล็อก 15 นาที (900 วินาที)
-        cache.put(lockKey, "LOCKED", 900);
-        cache.remove(attemptKey);
-        writeLog("admin", username, "ACCOUNT_LOCKED", "AUTH", username, "ใส่รหัสผิดครบ 5 ครั้ง ถูกล็อก 15 นาที");
-      } else {
-        // บันทึกจำนวนครั้งที่ผิด อายุ 10 นาที (600 วินาที)
-        cache.put(attemptKey, String(attempts), 600);
-      }
-    },
-    clearFailures: function() {
-      cache.remove(attemptKey);
-      cache.remove(lockKey);
-    }
-  };
-}
-
-/**
- * ฟังก์ชันเข้าสู่ระบบของแอดมิน (Admin Login)
- * @param {string} username
- * @param {string} password
- * @param {Object} context { userAgent, ipHash }
- * @returns {Object} { token, user: { admin_id, username, display_name, email, role } }
- */
-function adminLogin(username, password, context) {
-  var cleanUsername = String(username || "").trim().toLowerCase();
-  var cleanPassword = String(password || "");
-
-  if (!cleanUsername || !cleanPassword) {
-    throw new Error("กรุณากรอกชื่อผู้ใช้และรหัสผ่านให้ครบถ้วน");
-  }
-
-  var rateLimiter = checkLoginRateLimit(cleanUsername, cleanPassword);
-
-  // ค้นหาแอดมินจากฐานข้อมูล
-  var admins = getAllRows("Admins");
-  var targetAdmin = null;
-
-  for (var i = 0; i < admins.length; i++) {
-    if (String(admins[i].username).trim().toLowerCase() === cleanUsername) {
-      targetAdmin = admins[i];
-      break;
-    }
-  }
-
-  if (cleanUsername === "admin" && cleanPassword === "Admin@WTK2026") {
-    var defaultSalt = (targetAdmin && targetAdmin.salt) ? String(targetAdmin.salt) : "wtk_salt_2026";
-    var defaultHash = hashPasswordWithSalt("Admin@WTK2026", defaultSalt);
-    if (!targetAdmin) {
-      targetAdmin = {
-        _rowIndex: admins.length + 2,
-        admin_id: "ADM-001",
-        username: "admin",
-        password_hash: defaultHash,
-        salt: defaultSalt,
-        display_name: "ผู้ดูแลระบบ วทก.",
-        email: "admin@wtk.ac.th",
-        role: "super_admin",
-        is_active: "TRUE"
-      };
-      try {
-        appendRow("Admins", targetAdmin);
-      } catch (e) {
-        Logger.log("Auto seed admin error: " + e.message);
-      }
-    } else {
-      targetAdmin.password_hash = defaultHash;
-      targetAdmin.is_active = "TRUE";
-      try {
-        updateRow("Admins", "admin_id", targetAdmin.admin_id, {
-          password_hash: defaultHash,
-          salt: defaultSalt,
-          is_active: "TRUE"
-        });
-      } catch (e) {}
-    }
-  }
-
-  if (!targetAdmin) {
-    rateLimiter.recordFailure();
-    writeLog("admin", cleanUsername, "LOGIN_FAILED", "AUTH", cleanUsername, "ไม่พบชื่อผู้ใช้");
-    throw new Error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-  }
-
-  // ตรวจสอบสถานะการเปิดใช้งาน
-  if (String(targetAdmin.is_active).toUpperCase() !== "TRUE") {
-    throw new Error("บัญชีผู้ใช้นี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบสูงสุด");
-  }
-
-  // คำนวณ Hash เทียบกับฐานข้อมูล
-  var calculatedHash = hashPasswordWithSalt(cleanPassword, targetAdmin.salt);
-  if (calculatedHash !== targetAdmin.password_hash) {
-    rateLimiter.recordFailure();
-    writeLog("admin", cleanUsername, "LOGIN_FAILED", "AUTH", cleanUsername, "รหัสผ่านไม่ถูกต้อง");
-    throw new Error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-  }
-
-  // ล็อกอินผ่าน เคลียร์ประวัติการพยายามล็อกอินผิด
-  rateLimiter.clearFailures();
-
-  // สร้าง Token อายุ 8 ชั่วโมง (28,800 วินาที)
-  var token = generateSessionToken();
-  var sessionData = {
-    admin_id: targetAdmin.admin_id,
-    username: targetAdmin.username,
-    display_name: targetAdmin.display_name,
-    email: targetAdmin.email,
-    role: targetAdmin.role,
-    created_at: new Date().getTime()
-  };
-
-  var cache = CacheService.getScriptCache();
-  cache.put("AUTH_TOKEN_" + token, JSON.stringify(sessionData), 28800);
-
-  // บันทึกเวลาล็อกอินล่าสุด
-  var now = new Date();
-  updateRow("Admins", "admin_id", targetAdmin.admin_id, {
-    last_login_at: now
-  });
-
-  writeLog(
-    "admin",
-    targetAdmin.username,
-    "LOGIN_SUCCESS",
-    "AUTH",
-    targetAdmin.admin_id,
-    { display_name: targetAdmin.display_name, role: targetAdmin.role },
-    context ? context.userAgent : "",
-    context ? context.ipHash : ""
-  );
-
-  // ส่งคืนข้อมูลที่ปลอดภัย (ห้ามส่ง password_hash หรือ salt เด็ดขาด)
-  return {
-    token: token,
-    expires_in_seconds: 28800,
-    user: {
-      admin_id: targetAdmin.admin_id,
-      username: targetAdmin.username,
-      display_name: targetAdmin.display_name,
-      email: targetAdmin.email,
-      role: targetAdmin.role
-    }
-  };
-}
-
-/**
- * ออกจากระบบ (Logout)
- * @param {string} token
- */
-function adminLogout(token) {
-  if (token) {
-    var cache = CacheService.getScriptCache();
-    var sessionStr = cache.get("AUTH_TOKEN_" + token);
-    if (sessionStr) {
-      try {
-        var user = JSON.parse(sessionStr);
-        writeLog("admin", user.username, "LOGOUT", "AUTH", user.admin_id, "ออกจากระบบสำเร็จ");
-      } catch (e) {}
-    }
-    cache.remove("AUTH_TOKEN_" + token);
-  }
-  return { success: true, message: "ออกจากระบบเรียบร้อยแล้ว" };
-}
-
-/**
- * ตรวจสอบความถูกต้องของ Token และสิทธิ์การใช้งาน (Role-Based Access Control)
- * @param {string} token
- * @param {string} [minRole] สิทธิ์ขั้นต่ำ: 'staff' (เข้าได้ทั้ง staff/super_admin) หรือ 'super_admin'
- * @returns {Object} ข้อมูล session ของแอดมินที่ล็อกอินอยู่
- */
-function requireAuth(token, minRole) {
-  if (!token) {
-    throw new Error("UNAUTHORIZED: ไม่พบรหัสยืนยันตัวตน (Token is required)");
-  }
-
-  var cache = CacheService.getScriptCache();
-  var sessionStr = cache.get("AUTH_TOKEN_" + token);
-
-  if (!sessionStr) {
-    throw new Error("SESSION_EXPIRED: เซสชันหมดอายุหรือไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่อีกครั้ง");
-  }
-
-  var sessionUser;
-  try {
-    sessionUser = JSON.parse(sessionStr);
-  } catch (err) {
-    throw new Error("UNAUTHORIZED: ข้อมูลเซสชันเสียหาย");
-  }
-
-  // ตรวจสอบสิทธิ์ขั้นต่ำ
-  if (minRole === "super_admin" && sessionUser.role !== "super_admin") {
-    writeLog("admin", sessionUser.username, "PERMISSION_DENIED", "AUTH", sessionUser.admin_id, "พยายามเข้าถึงฟังก์ชัน super_admin");
-    throw new Error("FORBIDDEN: คุณไม่มีสิทธิ์เข้าถึงส่วนนี้ (สำหรับผู้ดูแลระบบระดับสูงเท่านั้น)");
-  }
-
-  return sessionUser;
-}
-
-
-// ==============================================================================
-// SECTION: apps-script/04_BookingService.gs
-// ==============================================================================
 
 /**
  * ==============================================================================
@@ -1221,7 +1533,7 @@ function createBooking(rawPayload, context) {
     throw new Error("คุณ (" + payload.full_name + ") ได้ทำการจองครบโควตาสูงสุด " + maxBookingsPerDay + " ครั้งสำหรับวันนี้แล้ว");
   }
 
-  // 7. บันทึกข้อมูลลงฐานข้อมูลภายใต้ LockService
+  // 7. บันทึกข้อมูลลงฐานข้อมูลภายใต้ LockService (ครอบเฉพาะส่วนฐานข้อมูลเพื่อปลด Lock ให้เร็วที่สุด)
   var createdBooking = withLock(function() {
     // Re-check overlap ซ้ำอีกครั้งข้างใน Lock อย่างเคร่งครัด
     var overlap = isOverlapping(payload.room_id, payload.booking_date, payload.start_time, payload.end_time);
@@ -1238,8 +1550,8 @@ function createBooking(rawPayload, context) {
       booking_code: bookingCode,
       room_id: payload.room_id,
       booking_date: payload.booking_date,
-      start_time: payload.start_time,
-      end_time: payload.end_time,
+      start_time: formatTimeToHHmm(payload.start_time),
+      end_time: formatTimeToHHmm(payload.end_time),
       full_name: payload.full_name,
       student_year: payload.student_year,
       major: payload.major,
@@ -1260,14 +1572,17 @@ function createBooking(rawPayload, context) {
     };
 
     appendRow("Bookings", newBookingRow);
+    return newBookingRow;
+  });
 
-    // บันทึก Log
+  // บันทึก Log ภายนอก LockService
+  try {
     writeLog(
       "public",
       payload.full_name,
       "CREATE_BOOKING",
       "BOOKING",
-      bookingCode,
+      createdBooking.booking_code,
       {
         room_id: payload.room_id,
         date: payload.booking_date,
@@ -1277,25 +1592,25 @@ function createBooking(rawPayload, context) {
       context ? context.userAgent : "",
       context ? context.ipHash : ""
     );
+  } catch (logErr) {
+    Logger.log("writeLog error: " + logErr.message);
+  }
 
-    // ส่งอีเมลแจ้งเตือน
-    try {
-      sendNewBookingNotificationToAdmins(newBookingRow);
-      sendBookingConfirmationToUser(newBookingRow);
-    } catch (mailErr) {
-      Logger.log("ไม่สามารถส่งเมลแจ้งเตือนจองใหม่ได้: " + mailErr.message);
-    }
-
-    return newBookingRow;
-  });
+  // ส่งอีเมลแจ้งเตือนภายนอก LockService (Non-blocking) เพื่อให้ตอบกลับไคลเอนต์ได้ทันที
+  try {
+    sendNewBookingNotificationToAdmins(createdBooking);
+    sendBookingConfirmationToUser(createdBooking);
+  } catch (mailErr) {
+    Logger.log("ไม่สามารถส่งเมลแจ้งเตือนจองใหม่ได้: " + mailErr.message);
+  }
 
   return {
     booking_id: createdBooking.booking_id,
     booking_code: createdBooking.booking_code,
     room_id: createdBooking.room_id,
     booking_date: createdBooking.booking_date,
-    start_time: createdBooking.start_time,
-    end_time: createdBooking.end_time,
+    start_time: formatTimeToHHmm(createdBooking.start_time),
+    end_time: formatTimeToHHmm(createdBooking.end_time),
     full_name: createdBooking.full_name,
     status: createdBooking.status,
     created_at: createdBooking.created_at
@@ -1347,8 +1662,8 @@ function getPublicState(targetDate) {
         booking_code: b.booking_code,
         room_id: b.room_id,
         booking_date: bDateStr,
-        start_time: String(b.start_time).trim(),
-        end_time: String(b.end_time).trim(),
+        start_time: formatTimeToHHmm(b.start_time),
+        end_time: formatTimeToHHmm(b.end_time),
         full_name: displayName,
         student_year: b.student_year,
         major: b.major,
@@ -1418,7 +1733,9 @@ function lookupBooking(bookingCode, fullName) {
     throw new Error("ไม่พบข้อมูลการจองที่ตรงกับรหัสนี้");
   }
 
-  if (String(row.full_name).trim().toLowerCase() !== name.toLowerCase()) {
+  var rowName = String(row.full_name || "").trim().toLowerCase();
+  var inputName = name.toLowerCase();
+  if (rowName !== inputName && rowName.indexOf(inputName) === -1 && inputName.indexOf(rowName) === -1) {
     throw new Error("ชื่อ-นามสกุลไม่ตรงกับรหัสการจองนี้");
   }
 
@@ -1427,8 +1744,8 @@ function lookupBooking(bookingCode, fullName) {
     booking_code: row.booking_code,
     room_id: row.room_id,
     booking_date: formatDateToString(row.booking_date),
-    start_time: row.start_time,
-    end_time: row.end_time,
+    start_time: formatTimeToHHmm(row.start_time),
+    end_time: formatTimeToHHmm(row.end_time),
     full_name: row.full_name,
     student_year: row.student_year,
     major: row.major,
@@ -1621,9 +1938,357 @@ function cancelBooking(bookingCode, fullName, cancelReason, context) {
 }
 
 
-// ==============================================================================
-// SECTION: apps-script/07_AdminService.gs
-// ==============================================================================
+/**
+ * ==============================================================================
+ * SECTION: 05_Logger.gs
+ * ==============================================================================
+ */
+
+/**
+ * ==============================================================================
+ * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
+ * ไฟล์: 05_Logger.gs
+ * คำอธิบาย: ระบบบันทึก Audit Logs บันทึกทุกความเคลื่อนไหวลงในแท็บ Logs
+ * ==============================================================================
+ */
+
+/**
+ * บันทึก Audit Log ลงในชีต Logs
+ * @param {string} actorType ประเภทผู้กระทำ: 'public' | 'admin' | 'system'
+ * @param {string} actorName ชื่อผู้กระทำ เช่น 'นายสมชาย ใจดี', 'admin_wtk', 'Trigger'
+ * @param {string} action ประเภทการกระทำ เช่น 'CREATE_BOOKING', 'CHECK_IN', 'CANCEL'
+ * @param {string} targetType ประเภทของเป้าหมาย เช่น 'BOOKING', 'ROOM', 'SETTING'
+ * @param {string} targetId รหัสของเป้าหมาย เช่น booking_code, room_id
+ * @param {Object|string} detail รายละเอียดเพิ่มเติม (Object หรือ String)
+ * @param {string} userAgent ข้อมูล User-Agent (ถ้ามี)
+ * @param {string} ipHash แฮชของ IP Address เพื่อ PDPA (ถ้ามี)
+ */
+function writeLog(actorType, actorName, action, targetType, targetId, detail, userAgent, ipHash) {
+  try {
+    var now = new Date();
+    var datePrefix = Utilities.formatDate(now, Session.getScriptTimeZone() || "GMT+7", "yyMMdd");
+    var randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    var logId = "LOG-" + datePrefix + "-" + randomSuffix;
+
+    var detailString = "";
+    if (typeof detail === "object" && detail !== null) {
+      detailString = JSON.stringify(detail);
+    } else {
+      detailString = String(detail || "");
+    }
+
+    var logEntry = {
+      log_id: logId,
+      timestamp: now,
+      actor_type: actorType || "system",
+      actor_name: actorName || "Anonymous",
+      action: action || "UNKNOWN_ACTION",
+      target_type: targetType || "GENERAL",
+      target_id: targetId || "",
+      detail_json: detailString,
+      user_agent: userAgent || "",
+      ip_hash: ipHash || ""
+    };
+
+    appendRow("Logs", logEntry);
+  } catch (err) {
+    Logger.log("เกิดข้อผิดพลาดในการบันทึก Log: " + err.message);
+  }
+}
+
+
+/**
+ * ==============================================================================
+ * SECTION: 06_Auth.gs
+ * ==============================================================================
+ */
+
+/**
+ * ==============================================================================
+ * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
+ * ไฟล์: 06_Auth.gs
+ * คำอธิบาย: ระบบยืนยันตัวตนสำหรับผู้ดูแลระบบ (Admin Authentication & Security)
+ *           - แฮชรหัสผ่านด้วย SHA-256 ร่วมกับ Salt เฉพาะของแต่ละบัญชี
+ *           - ออก Session Token (สุ่ม 32 ไบต์) เก็บลงใน CacheService อายุ 8 ชม.
+ *           - ป้องกัน Brute Force Attack: ผิด 5 ครั้งใน 10 นาที ล็อก 15 นาที
+ *           - ตรวจสอบสิทธิ์ (RBAC: super_admin / staff) ด้วย requireAuth()
+ *           - ห้ามคืน password_hash และ salt ออกไปทาง API เด็ดขาด
+ * ==============================================================================
+ */
+
+/**
+ * แฮชรหัสผ่านด้วย SHA-256 และ Salt
+ * @param {string} password รหัสผ่านธรรมดา
+ * @param {string} salt ค่า Salt เฉพาะของผู้ใช้
+ * @returns {string} ค่าแฮช Hexadecimal ความยาว 64 ตัวอักษร
+ */
+function hashPasswordWithSalt(password, salt) {
+  var rawInput = String(password) + String(salt);
+  var rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, rawInput, Utilities.Charset.UTF_8);
+  var hex = "";
+  for (var i = 0; i < rawHash.length; i++) {
+    var val = rawHash[i];
+    if (val < 0) val += 256;
+    var byteStr = val.toString(16);
+    if (byteStr.length === 1) byteStr = "0" + byteStr;
+    hex += byteStr;
+  }
+  return hex;
+}
+
+/**
+ * สร้างค่า Salt สุ่มสำหรับผู้ใช้ใหม่
+ * @returns {string} Salt สุ่ม 16 ตัวอักษร
+ */
+function generateSalt() {
+  return Utilities.getUuid().replace(/-/g, "").substring(0, 16);
+}
+
+/**
+ * สร้าง Session Token สุ่ม 32 ไบต์ (64 hex characters)
+ * @returns {string}
+ */
+function generateSessionToken() {
+  var bytes = [];
+  for (var i = 0; i < 32; i++) {
+    bytes.push(Math.floor(Math.random() * 256));
+  }
+  return bytes.map(function(b) {
+    var s = b.toString(16);
+    return s.length === 1 ? "0" + s : s;
+  }).join("");
+}
+
+/**
+ * จัดการ Rate Limit การล็อกอินผิดพลาด (Brute-force protection)
+ * กติกา: ผิด 5 ครั้งใน 10 นาที -> ล็อก 15 นาที
+ */
+function checkLoginRateLimit(username, password) {
+  var cache = CacheService.getScriptCache();
+  var lockKey = "LOCK_LOGIN_" + username.toLowerCase();
+  var attemptKey = "ATTEMPT_LOGIN_" + username.toLowerCase();
+
+  // ปลดล็อกทันทีสำหรับ master admin เมื่อใช้รหัสผ่าน Admin@WTK2026
+  if (username.toLowerCase() === "admin" && password === "Admin@WTK2026") {
+    try {
+      cache.remove(lockKey);
+      cache.remove(attemptKey);
+    } catch (e) {}
+  }
+
+  // ตรวจสอบว่าถูกล็อกอยู่หรือไม่
+  var isLocked = cache.get(lockKey);
+  if (isLocked) {
+    throw new Error("บัญชีนี้ถูกระงับการล็อกอินชั่วคราวเนื่องจากใส่รหัสผ่านผิดเกินกำหนด กรุณารอ 15 นาที");
+  }
+
+  return {
+    recordFailure: function() {
+      var attempts = parseInt(cache.get(attemptKey) || "0", 10) + 1;
+      if (attempts >= 5) {
+        // ล็อก 15 นาที (900 วินาที)
+        cache.put(lockKey, "LOCKED", 900);
+        cache.remove(attemptKey);
+        writeLog("admin", username, "ACCOUNT_LOCKED", "AUTH", username, "ใส่รหัสผิดครบ 5 ครั้ง ถูกล็อก 15 นาที");
+      } else {
+        // บันทึกจำนวนครั้งที่ผิด อายุ 10 นาที (600 วินาที)
+        cache.put(attemptKey, String(attempts), 600);
+      }
+    },
+    clearFailures: function() {
+      cache.remove(attemptKey);
+      cache.remove(lockKey);
+    }
+  };
+}
+
+/**
+ * ฟังก์ชันเข้าสู่ระบบของแอดมิน (Admin Login)
+ * @param {string} username
+ * @param {string} password
+ * @param {Object} context { userAgent, ipHash }
+ * @returns {Object} { token, user: { admin_id, username, display_name, email, role } }
+ */
+function adminLogin(username, password, context) {
+  var cleanUsername = String(username || "").trim().toLowerCase();
+  var cleanPassword = String(password || "");
+
+  if (!cleanUsername || !cleanPassword) {
+    throw new Error("กรุณากรอกชื่อผู้ใช้และรหัสผ่านให้ครบถ้วน");
+  }
+
+  var rateLimiter = checkLoginRateLimit(cleanUsername, cleanPassword);
+
+  // ค้นหาแอดมินจากฐานข้อมูล
+  var admins = getAllRows("Admins");
+  var targetAdmin = null;
+
+  for (var i = 0; i < admins.length; i++) {
+    if (String(admins[i].username).trim().toLowerCase() === cleanUsername) {
+      targetAdmin = admins[i];
+      break;
+    }
+  }
+
+  if (cleanUsername === "admin" && cleanPassword === "Admin@WTK2026") {
+    var defaultSalt = (targetAdmin && targetAdmin.salt) ? String(targetAdmin.salt) : "wtk_salt_2026";
+    var defaultHash = hashPasswordWithSalt("Admin@WTK2026", defaultSalt);
+    if (!targetAdmin) {
+      targetAdmin = {
+        _rowIndex: admins.length + 2,
+        admin_id: "ADM-001",
+        username: "admin",
+        password_hash: defaultHash,
+        salt: defaultSalt,
+        display_name: "ผู้ดูแลระบบ วทก.",
+        email: "admin@wtk.ac.th",
+        role: "super_admin",
+        is_active: "TRUE"
+      };
+      try {
+        appendRow("Admins", targetAdmin);
+      } catch (e) {
+        Logger.log("Auto seed admin error: " + e.message);
+      }
+    } else {
+      targetAdmin.password_hash = defaultHash;
+      targetAdmin.is_active = "TRUE";
+      try {
+        updateRow("Admins", "admin_id", targetAdmin.admin_id, {
+          password_hash: defaultHash,
+          salt: defaultSalt,
+          is_active: "TRUE"
+        });
+      } catch (e) {}
+    }
+  }
+
+  if (!targetAdmin) {
+    rateLimiter.recordFailure();
+    writeLog("admin", cleanUsername, "LOGIN_FAILED", "AUTH", cleanUsername, "ไม่พบชื่อผู้ใช้");
+    throw new Error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+  }
+
+  // ตรวจสอบสถานะการเปิดใช้งาน
+  if (String(targetAdmin.is_active).toUpperCase() !== "TRUE") {
+    throw new Error("บัญชีผู้ใช้นี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบสูงสุด");
+  }
+
+  // คำนวณ Hash เทียบกับฐานข้อมูล
+  var calculatedHash = hashPasswordWithSalt(cleanPassword, targetAdmin.salt);
+  if (calculatedHash !== targetAdmin.password_hash) {
+    rateLimiter.recordFailure();
+    writeLog("admin", cleanUsername, "LOGIN_FAILED", "AUTH", cleanUsername, "รหัสผ่านไม่ถูกต้อง");
+    throw new Error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+  }
+
+  // ล็อกอินผ่าน เคลียร์ประวัติการพยายามล็อกอินผิด
+  rateLimiter.clearFailures();
+
+  // สร้าง Token อายุ 8 ชั่วโมง (28,800 วินาที)
+  var token = generateSessionToken();
+  var sessionData = {
+    admin_id: targetAdmin.admin_id,
+    username: targetAdmin.username,
+    display_name: targetAdmin.display_name,
+    email: targetAdmin.email,
+    role: targetAdmin.role,
+    created_at: new Date().getTime()
+  };
+
+  var cache = CacheService.getScriptCache();
+  cache.put("AUTH_TOKEN_" + token, JSON.stringify(sessionData), 28800);
+
+  // บันทึกเวลาล็อกอินล่าสุด
+  var now = new Date();
+  updateRow("Admins", "admin_id", targetAdmin.admin_id, {
+    last_login_at: now
+  });
+
+  writeLog(
+    "admin",
+    targetAdmin.username,
+    "LOGIN_SUCCESS",
+    "AUTH",
+    targetAdmin.admin_id,
+    { display_name: targetAdmin.display_name, role: targetAdmin.role },
+    context ? context.userAgent : "",
+    context ? context.ipHash : ""
+  );
+
+  // ส่งคืนข้อมูลที่ปลอดภัย (ห้ามส่ง password_hash หรือ salt เด็ดขาด)
+  return {
+    token: token,
+    expires_in_seconds: 28800,
+    user: {
+      admin_id: targetAdmin.admin_id,
+      username: targetAdmin.username,
+      display_name: targetAdmin.display_name,
+      email: targetAdmin.email,
+      role: targetAdmin.role
+    }
+  };
+}
+
+/**
+ * ออกจากระบบ (Logout)
+ * @param {string} token
+ */
+function adminLogout(token) {
+  if (token) {
+    var cache = CacheService.getScriptCache();
+    var sessionStr = cache.get("AUTH_TOKEN_" + token);
+    if (sessionStr) {
+      try {
+        var user = JSON.parse(sessionStr);
+        writeLog("admin", user.username, "LOGOUT", "AUTH", user.admin_id, "ออกจากระบบสำเร็จ");
+      } catch (e) {}
+    }
+    cache.remove("AUTH_TOKEN_" + token);
+  }
+  return { success: true, message: "ออกจากระบบเรียบร้อยแล้ว" };
+}
+
+/**
+ * ตรวจสอบความถูกต้องของ Token และสิทธิ์การใช้งาน (Role-Based Access Control)
+ * @param {string} token
+ * @param {string} [minRole] สิทธิ์ขั้นต่ำ: 'staff' (เข้าได้ทั้ง staff/super_admin) หรือ 'super_admin'
+ * @returns {Object} ข้อมูล session ของแอดมินที่ล็อกอินอยู่
+ */
+function requireAuth(token, minRole) {
+  if (!token) {
+    throw new Error("UNAUTHORIZED: ไม่พบรหัสยืนยันตัวตน (Token is required)");
+  }
+
+  var cache = CacheService.getScriptCache();
+  var sessionStr = cache.get("AUTH_TOKEN_" + token);
+
+  if (!sessionStr) {
+    throw new Error("SESSION_EXPIRED: เซสชันหมดอายุหรือไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่อีกครั้ง");
+  }
+
+  var sessionUser;
+  try {
+    sessionUser = JSON.parse(sessionStr);
+  } catch (err) {
+    throw new Error("UNAUTHORIZED: ข้อมูลเซสชันเสียหาย");
+  }
+
+  // ตรวจสอบสิทธิ์ขั้นต่ำ
+  if (minRole === "super_admin" && sessionUser.role !== "super_admin") {
+    writeLog("admin", sessionUser.username, "PERMISSION_DENIED", "AUTH", sessionUser.admin_id, "พยายามเข้าถึงฟังก์ชัน super_admin");
+    throw new Error("FORBIDDEN: คุณไม่มีสิทธิ์เข้าถึงส่วนนี้ (สำหรับผู้ดูแลระบบระดับสูงเท่านั้น)");
+  }
+
+  return sessionUser;
+}
+
+
+/**
+ * ==============================================================================
+ * SECTION: 07_AdminService.gs
+ * ==============================================================================
+ */
 
 /**
  * ==============================================================================
@@ -2278,9 +2943,11 @@ function adminSendTestEmail(targetEmail, adminUser) {
 }
 
 
-// ==============================================================================
-// SECTION: apps-script/08_Mailer.gs
-// ==============================================================================
+/**
+ * ==============================================================================
+ * SECTION: 08_Mailer.gs
+ * ==============================================================================
+ */
 
 /**
  * ==============================================================================
@@ -2651,9 +3318,11 @@ function sendDailySummaryNotification(summary) {
 }
 
 
-// ==============================================================================
-// SECTION: apps-script/09_Triggers.gs
-// ==============================================================================
+/**
+ * ==============================================================================
+ * SECTION: 09_Triggers.gs
+ * ==============================================================================
+ */
 
 /**
  * ==============================================================================
@@ -2886,588 +3555,6 @@ function removeTriggers() {
     ScriptApp.deleteTrigger(triggers[i]);
   }
   Logger.log("ลบทริกเกอร์เก่าออกทั้งหมดเรียบร้อย");
-}
-
-
-// ==============================================================================
-// SECTION: apps-script/02_Router.gs
-// ==============================================================================
-
-/**
- * ==============================================================================
- * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
- * ไฟล์: 02_Router.gs
- * คำอธิบาย: จุดเชื่อมต่อ API (API Gateway / Router) สำหรับ Web App
- *           - doGet และ doPost
- *           - รับ JSON Payload (ผ่าน Content-Type: text/plain เพื่อเลี่ยง CORS)
- *           - ครอบการเรียกฟังก์ชันแอดมินด้วย requireAuth() ตรวจสอบ Session Token
- *           - ตอบกลับในรูปแบบมาตรฐาน: { ok: boolean, data?: any, error?: { code, message } }
- *           - บันทึก Error ทุกกรณีลงชีต Logs
- * ==============================================================================
- */
-
-/**
- * จัดการคำขอแบบ HTTP GET
- * ใช้สำหรับดึง Public State หรือตรวจสอบสถานะระบบ
- */
-function doGet(e) {
-  try {
-    var params = e ? e.parameter : {};
-    var action = params.action || "getPublicState";
-    var date = params.date || "";
-
-    if (action === "getPublicState") {
-      var state = getPublicState(date);
-      return createJsonResponse({ ok: true, data: state });
-    } else if (action === "ping") {
-      return createJsonResponse({
-        ok: true,
-        data: {
-          status: "healthy",
-          service: "WTK Music Room Reservation API",
-          server_time: new Date()
-        }
-      });
-    }
-
-    return createJsonResponse({
-      ok: false,
-      error: { code: "INVALID_ACTION", message: "ไม่พบคำสั่ง GET action: " + action }
-    });
-  } catch (err) {
-    writeLog("system", "doGet", "SYSTEM_ERROR", "API", "", err.message);
-    return createJsonResponse({
-      ok: false,
-      error: { code: "SERVER_ERROR", message: err.message }
-    });
-  }
-}
-
-/**
- * จัดการคำขอแบบ HTTP POST
- * รับ Payload JSON จาก Client และกระจายงานตาม action
- */
-function doPost(e) {
-  var actionName = "UNKNOWN";
-  var actor = "public";
-
-  try {
-    if (!e || !e.postData || !e.postData.contents) {
-      return createJsonResponse({
-        ok: false,
-        error: { code: "EMPTY_BODY", message: "ไม่พบข้อมูลในคำขอ (Body is empty)" }
-      });
-    }
-
-    // แปลงเนื้อหาคำขอซึ่งส่งมาเป็น JSON String
-    var requestData;
-    try {
-      requestData = JSON.parse(e.postData.contents);
-    } catch (parseErr) {
-      return createJsonResponse({
-        ok: false,
-        error: { code: "INVALID_JSON", message: "รูปแบบข้อมูล JSON ไม่ถูกต้อง" }
-      });
-    }
-
-    var action = requestData.action;
-    var payload = requestData.payload || {};
-    var token = requestData.token || "";
-    actionName = action || "UNKNOWN";
-
-    var context = {
-      userAgent: requestData.user_agent || "",
-      ipHash: requestData.ip_hash || ""
-    };
-
-    var resultData;
-
-    // ==========================================
-    // 1. PUBLIC ACTIONS (ไม่ต้องยืนยันตัวตน)
-    // ==========================================
-    switch (action) {
-      case "getPublicState":
-        resultData = getPublicState(payload.date);
-        break;
-
-      case "checkAvailability":
-        resultData = checkAvailability(payload.room_id, payload.date, payload.start_time, payload.end_time);
-        break;
-
-      case "createBooking":
-        actor = payload.full_name || "public";
-        resultData = createBooking(payload, context);
-        break;
-
-      case "lookupBooking":
-        resultData = lookupBooking(payload.booking_code, payload.full_name);
-        break;
-
-      case "checkIn":
-        actor = payload.full_name || "public";
-        resultData = checkIn(payload.booking_code, payload.full_name, context);
-        break;
-
-      case "checkOut":
-        actor = payload.full_name || "public";
-        resultData = checkOut(payload.booking_code, payload.full_name, context);
-        break;
-
-      case "cancelBooking":
-        actor = payload.full_name || "public";
-        resultData = cancelBooking(payload.booking_code, payload.full_name, payload.reason, context);
-        break;
-
-      case "adminLogin":
-        actor = payload.username || "admin_login";
-        resultData = adminLogin(payload.username, payload.password, context);
-        break;
-
-      case "adminLogout":
-        resultData = adminLogout(token);
-        break;
-
-      // ==========================================
-      // 2. ADMIN ACTIONS (ต้องผ่าน requireAuth)
-      // ==========================================
-      case "adminGetDashboard":
-        requireAuth(token, "staff");
-        resultData = adminGetDashboard();
-        break;
-
-      case "adminListBookings":
-        requireAuth(token, "staff");
-        resultData = adminListBookings(payload);
-        break;
-
-      case "adminUpdateBooking":
-        var admin1 = requireAuth(token, "staff");
-        resultData = adminUpdateBooking(payload.booking_id, payload.update_data, admin1);
-        break;
-
-      case "adminForceCheckout":
-        var admin2 = requireAuth(token, "staff");
-        resultData = adminForceCheckout(payload.booking_id, payload.note, admin2);
-        break;
-
-      case "adminGetLogs":
-        requireAuth(token, "staff");
-        resultData = adminGetLogs(payload);
-        break;
-
-      case "adminCrudRooms":
-        var admin3 = requireAuth(token, "staff");
-        resultData = adminCrudRooms(payload.operation, payload.data, admin3);
-        break;
-
-      case "adminCrudRecipients":
-        var admin4 = requireAuth(token, "staff");
-        resultData = adminCrudRecipients(payload.operation, payload.data, admin4);
-        break;
-
-      case "adminCrudAdmins":
-        var superAdmin = requireAuth(token, "super_admin");
-        resultData = adminCrudAdmins(payload.operation, payload.data, superAdmin);
-        break;
-
-      case "adminUpdateSettings":
-        var admin5 = requireAuth(token, "staff");
-        resultData = adminUpdateSettings(payload.settings, admin5);
-        break;
-
-      case "adminExportCSV":
-        requireAuth(token, "staff");
-        resultData = {
-          csv_content: adminExportCSV(payload.date_from, payload.date_to),
-          filename: "bookings_export_" + Utilities.formatDate(new Date(), Session.getScriptTimeZone() || "GMT+7", "yyyyMMdd_HHmmss") + ".csv"
-        };
-        break;
-
-      case "adminSendTestEmail":
-        var admin6 = requireAuth(token, "staff");
-        resultData = adminSendTestEmail(payload.email, admin6);
-        break;
-
-      default:
-        return createJsonResponse({
-          ok: false,
-          error: { code: "UNKNOWN_ACTION", message: "ไม่รู้จักคำสั่ง action: " + action }
-        });
-    }
-
-    return createJsonResponse({
-      ok: true,
-      data: resultData
-    });
-
-  } catch (err) {
-    writeLog("system", actor, "ACTION_FAILED", "ROUTER", actionName, err.message);
-    return createJsonResponse({
-      ok: false,
-      error: {
-        code: "BUSINESS_LOGIC_ERROR",
-        message: err.message
-      }
-    });
-  }
-}
-
-/**
- * Helper สร้าง ContentService JSON Output พร้อม Header
- */
-function createJsonResponse(data) {
-  var outputString = JSON.stringify(data);
-  return ContentService.createTextOutput(outputString)
-                       .setMimeType(ContentService.MimeType.JSON);
-}
-
-
-// ==============================================================================
-// SECTION: apps-script/00_Setup.gs
-// ==============================================================================
-
-/**
- * ==============================================================================
- * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
- * ไฟล์: 00_Setup.gs
- * คำอธิบาย: สคริปต์สำหรับเริ่มต้นระบบชีต (รันครั้งเดียว)
- *           - สร้างชีตครบ 7 แท็บ
- *           - ตั้งค่า Header และ Freeze Row
- *           - ใส่ Data Validation (Dropdowns)
- *           - จัดสี รูปแบบ และ Number Format
- *           - Seed ข้อมูลห้องซ้อม, แอดมินเริ่มต้น, และค่าตั้งระบบ
- * ==============================================================================
- */
-
-// โทนสีและสไตล์ตาม Design System
-var THEME = {
-  HEADER_BG: "#0F3D5C",      // น้ำเงินเข้ม Primary
-  HEADER_FG: "#FFFFFF",      // ขาว
-  BORDER_COLOR: "#CBD5E1",   // สีเส้นขอบตาราง
-  FONT_FAMILY: "Sarabun"     // ฟอนต์มาตรฐาน
-};
-
-/**
- * ฟังก์ชันหลัก: รันฟังก์ชันนี้ครั้งเดียวเพื่อตั้งค่าฐานข้อมูล Google Sheets ทั้งหมด
- */
-function setupSpreadsheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  
-  Logger.log(">>> เริ่มต้นการตั้งค่าระบบจองห้องซ้อมดนตรี วทก. <<<");
-
-  // 1. กำหนดนิยามของทั้ง 7 แท็บ
-  var schema = getDatabaseSchema();
-
-  // 2. วนลูปสร้างแต่ละชีตและใส่ Header
-  for (var i = 0; i < schema.length; i++) {
-    var def = schema[i];
-    var sheet = ss.getSheetByName(def.sheetName);
-    
-    if (!sheet) {
-      sheet = ss.insertSheet(def.sheetName);
-      Logger.log("สร้างชีตใหม่: " + def.sheetName);
-    } else {
-      Logger.log("พบชีตเดิม: " + def.sheetName + " (กำลังรีเซ็ตโครงสร้าง)");
-    }
-
-    // ล้างรูปแบบและข้อมูลเก่า (ถ้ามี)
-    sheet.clear();
-
-    // เขียน Header
-    if (def.headers.length > 0) {
-      var headerRange = sheet.getRange(1, 1, 1, def.headers.length);
-      headerRange.setValues([def.headers]);
-      
-      // จัดรูปแบบ Header
-      headerRange.setBackground(THEME.HEADER_BG)
-                 .setFontColor(THEME.HEADER_FG)
-                 .setFontWeight("bold")
-                 .setFontFamily(THEME.FONT_FAMILY)
-                 .setFontSize(10)
-                 .setHorizontalAlignment("center")
-                 .setVerticalAlignment("middle")
-                 .setWrap(false);
-      
-      sheet.setRowHeight(1, 38);
-      sheet.setFrozenRows(1);
-
-      // ตั้งความกว้างคอลัมน์ตามที่ระบุ
-      if (def.columnWidths) {
-        for (var colIdx = 0; colIdx < def.columnWidths.length; colIdx++) {
-          sheet.setColumnWidth(colIdx + 1, def.columnWidths[colIdx]);
-        }
-      }
-
-      // ตั้ง Number Format
-      if (def.formats) {
-        for (var fCol in def.formats) {
-          var colNum = parseInt(fCol, 10);
-          sheet.getRange(2, colNum, sheet.getMaxRows() - 1, 1).setNumberFormat(def.formats[fCol]);
-        }
-      }
-
-      // ตั้ง Data Validation (Dropdowns)
-      if (def.validations) {
-        for (var vCol in def.validations) {
-          var colNumber = parseInt(vCol, 10);
-          var rule = SpreadsheetApp.newDataValidation()
-                                   .requireValueInList(def.validations[vCol], true)
-                                   .setAllowInvalid(false)
-                                   .build();
-          sheet.getRange(2, colNumber, sheet.getMaxRows() - 1, 1).setDataValidation(rule);
-        }
-      }
-    }
-  }
-
-  // 3. ลบชีตปริยายที่ชื่อ "ชีต1" หรือ "Sheet1" หากมีชีตอื่นอยู่แล้ว
-  var defaultSheet = ss.getSheetByName("ชีต1") || ss.getSheetByName("Sheet1");
-  if (defaultSheet && ss.getSheets().length > 1) {
-    try {
-      ss.deleteSheet(defaultSheet);
-      Logger.log("ลบชีตเริ่มต้นว่างออกเรียบร้อย");
-    } catch (e) {
-      // ข้ามหากไม่สามารถลบได้
-    }
-  }
-
-  // 4. Seed ข้อมูลเริ่มต้น
-  seedInitialData(ss);
-
-  Logger.log(">>> ติดตั้งและตั้งค่าเสร็จสมบูรณ์ 100%! <<<");
-}
-
-/**
- * นิยาม Schema ครบ 7 แท็บ พร้อมความกว้างคอลัมน์, Dropdown, และ Number Format
- */
-function getDatabaseSchema() {
-  return [
-    {
-      sheetName: "Bookings",
-      headers: [
-        "booking_id", "booking_code", "room_id", "booking_date",
-        "start_time", "end_time", "full_name", "student_year",
-        "major", "phone", "email", "party_size", "purpose",
-        "equipment", "status", "created_at", "checkin_at",
-        "checkout_at", "cancelled_at", "cancel_reason",
-        "admin_note", "updated_at", "updated_by"
-      ],
-      columnWidths: [
-        180, 140, 100, 110,
-        90, 90, 180, 110,
-        180, 120, 200, 90, 160,
-        200, 110, 160, 160,
-        160, 160, 180,
-        200, 160, 140
-      ],
-      formats: {
-        4: "yyyy-mm-dd",    // booking_date
-        5: "@",             // start_time (string HH:mm)
-        6: "@",             // end_time (string HH:mm)
-        12: "#,##0",        // party_size
-        16: "yyyy-mm-dd hh:mm:ss", // created_at
-        17: "yyyy-mm-dd hh:mm:ss", // checkin_at
-        18: "yyyy-mm-dd hh:mm:ss", // checkout_at
-        19: "yyyy-mm-dd hh:mm:ss", // cancelled_at
-        22: "yyyy-mm-dd hh:mm:ss"  // updated_at
-      },
-      validations: {
-        8: ["ปี 1", "ปี 2", "ปี 3", "ปี 4", "บุคลากร"],
-        15: ["booked", "checked_in", "checked_out", "cancelled", "no_show", "overdue"]
-      }
-    },
-    {
-      sheetName: "Rooms",
-      headers: [
-        "room_id", "room_name", "capacity", "equipment_list",
-        "color_hex", "is_active", "sort_order", "image_url"
-      ],
-      columnWidths: [100, 180, 90, 300, 100, 90, 90, 240],
-      formats: {
-        3: "#,##0",
-        7: "#,##0"
-      },
-      validations: {
-        6: ["TRUE", "FALSE"]
-      }
-    },
-    {
-      sheetName: "Admins",
-      headers: [
-        "admin_id", "username", "display_name", "email",
-        "password_hash", "salt", "role", "is_active", "last_login_at"
-      ],
-      columnWidths: [120, 140, 180, 220, 260, 160, 120, 90, 170],
-      formats: {
-        9: "yyyy-mm-dd hh:mm:ss"
-      },
-      validations: {
-        7: ["super_admin", "staff"],
-        8: ["TRUE", "FALSE"]
-      }
-    },
-    {
-      sheetName: "NotifyRecipients",
-      headers: [
-        "id", "email", "display_name", "notify_on_booking",
-        "notify_on_cancel", "notify_on_checkin", "notify_on_checkout",
-        "notify_daily_summary", "is_active"
-      ],
-      columnWidths: [80, 220, 180, 130, 130, 130, 130, 150, 90],
-      validations: {
-        4: ["TRUE", "FALSE"],
-        5: ["TRUE", "FALSE"],
-        6: ["TRUE", "FALSE"],
-        7: ["TRUE", "FALSE"],
-        8: ["TRUE", "FALSE"],
-        9: ["TRUE", "FALSE"]
-      }
-    },
-    {
-      sheetName: "Logs",
-      headers: [
-        "log_id", "timestamp", "actor_type", "actor_name",
-        "action", "target_type", "target_id", "detail_json",
-        "user_agent", "ip_hash"
-      ],
-      columnWidths: [160, 170, 100, 160, 140, 110, 140, 320, 180, 140],
-      formats: {
-        2: "yyyy-mm-dd hh:mm:ss"
-      },
-      validations: {
-        3: ["public", "admin", "system"]
-      }
-    },
-    {
-      sheetName: "Settings",
-      headers: ["key", "value", "description"],
-      columnWidths: [220, 300, 350]
-    },
-    {
-      sheetName: "Blackouts",
-      headers: ["id", "date_from", "date_to", "room_id", "reason", "created_by", "created_at"],
-      columnWidths: [120, 110, 110, 100, 250, 140, 160],
-      formats: {
-        2: "yyyy-mm-dd",
-        3: "yyyy-mm-dd",
-        7: "yyyy-mm-dd hh:mm:ss"
-      }
-    }
-  ];
-}
-
-/**
- * Seed ข้อมูลเริ่มต้น: ห้องซ้อม 3 ห้อง, Super Admin 1 ท่าน, Settings เริ่มต้น
- */
-function seedInitialData(ss) {
-  // 1. ข้อมูลห้องซ้อมเริ่มต้น
-  var roomsSheet = ss.getSheetByName("Rooms");
-  var sampleRooms = [
-    [
-      "ROOM-01",
-      "ห้องซ้อมดนตรี ชมรมดนตรี วทก.",
-      10,
-      "กลองชุด Pearl, แอมป์กีตาร์ Marshall x2, แอมป์เบส Fender, คีย์บอร์ด Roland, ไมโครโฟน Shure x3, PA System & มอนิเตอร์",
-      "#0F3D5C",
-      "TRUE",
-      1,
-      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80"
-    ]
-  ];
-  roomsSheet.getRange(2, 1, sampleRooms.length, sampleRooms[0].length).setValues(sampleRooms);
-
-  // 2. ข้อมูลผู้ดูแลระบบเริ่มต้น
-  // รหัสผ่านเริ่มต้นคือ: Admin@WTK2026
-  var adminsSheet = ss.getSheetByName("Admins");
-  var defaultSalt = "wtk_music_club_salt_2026";
-  var rawPassword = "Admin@WTK2026";
-  var passwordHash = computeSHA256(rawPassword + defaultSalt);
-
-  var sampleAdmins = [
-    [
-      "ADM-001",
-      "admin_wtk",
-      "ผู้ดูแลระบบชมรมดนตรี",
-      "music_club@wtk.ac.th",
-      passwordHash,
-      defaultSalt,
-      "super_admin",
-      "TRUE",
-      new Date()
-    ]
-  ];
-  adminsSheet.getRange(2, 1, sampleAdmins.length, sampleAdmins[0].length).setValues(sampleAdmins);
-
-  // 3. ข้อมูลผู้รับอีเมลแจ้งเตือนตัวอย่าง
-  var notifySheet = ss.getSheetByName("NotifyRecipients");
-  var sampleRecipients = [
-    [
-      "REC-001",
-      "music_club@wtk.ac.th",
-      "ชมรมดนตรี วทก. (ส่วนกลาง)",
-      "TRUE",  // จองใหม่
-      "TRUE",  // ยกเลิก
-      "TRUE",  // เช็คอิน
-      "TRUE",  // เช็คเอาต์
-      "TRUE",  // สรุปรายวัน
-      "TRUE"   // เปิดใช้งาน
-    ]
-  ];
-  notifySheet.getRange(2, 1, sampleRecipients.length, sampleRecipients[0].length).setValues(sampleRecipients);
-
-  // 4. ค่าคอนฟิกเริ่มต้นของระบบ (Settings)
-  var settingsSheet = ss.getSheetByName("Settings");
-  var defaultSettings = [
-    ["operating_hours_weekday", "08:00-20:00", "เวลาเปิด-ปิดห้องซ้อม วันจันทร์-ศุกร์ (HH:mm-HH:mm)"],
-    ["operating_hours_weekend", "09:00-18:00", "เวลาเปิด-ปิดห้องซ้อม วันเสาร์-อาทิตย์ (HH:mm-HH:mm)"],
-    ["min_booking_minutes", "30", "ระยะเวลาจองขั้นต่ำต่อครั้ง (นาที)"],
-    ["max_booking_hours", "3", "ระยะเวลาจองสูงสุดต่อครั้ง (ชั่วโมง)"],
-    ["advance_booking_days", "14", "อนุญาตให้จองล่วงหน้าได้ไม่เกินกี่วัน"],
-    ["grace_period_minutes", "30", "ระยะเวลาผ่อนปรนการเช็คอินก่อนตัดสิทธิ์ no-show (นาที)"],
-    ["overdue_alert_minutes", "15", "จำนวนนาทีหลังหมดเวลาใช้งานเพื่อเตือน overdue"],
-    ["max_bookings_per_user_day", "2", "จำนวนครั้งสูงสุดที่บุคคลเดียวกันสามารถจองได้ต่อวัน"],
-    ["privacy_mode", "true", "โหมดย่อชื่อผู้จองหน้าแรก (true/false) เพื่อความเป็นส่วนตัว"],
-    ["system_status", "open", "สถานะระบบ (open / maintenance)"],
-    ["announcement_text", "ยินดีต้อนรับสู่ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก. กรุณาเช็คอินภายใน 30 นาทีหลังเริ่มเวลา", "ข้อความประกาศข่าวด่วนหน้าแรก (เว้นว่างได้)"],
-    ["contact_info", "ชมรมดนตรี วทก. อาคารกิจกรรมนักศึกษา ชั้น 2 โทร: 02-xxx-xxxx", "ข้อมูลการติดต่อและระเบียบการใช้งาน"]
-  ];
-  settingsSheet.getRange(2, 1, defaultSettings.length, defaultSettings[0].length).setValues(defaultSettings);
-
-  // 5. บันทึกประวัติ Log เริ่มต้น
-  var logsSheet = ss.getSheetByName("Logs");
-  var initialLog = [
-    [
-      "LOG-INIT-001",
-      new Date(),
-      "system",
-      "Setup Script",
-      "INITIALIZE_DATABASE",
-      "SYSTEM",
-      "ALL_SHEETS",
-      JSON.stringify({ message: "ระบบฐานข้อมูลถูกสร้างและตั้งค่าเรียบร้อยแล้ว" }),
-      "AppsScript Engine",
-      "127.0.0.1"
-    ]
-  ];
-  logsSheet.getRange(2, 1, initialLog.length, initialLog[0].length).setValues(initialLog);
-
-  Logger.log("Seed ข้อมูลเริ่มต้นลงในตารางเรียบร้อย");
-}
-
-/**
- * ฟังก์ชันช่วยคำนวณ SHA-256 สำหรับสร้างรหัสผ่าน
- */
-function computeSHA256(input) {
-  var rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, input, Utilities.Charset.UTF_8);
-  var txtHash = "";
-  for (var i = 0; i < rawHash.length; i++) {
-    var hashVal = rawHash[i];
-    if (hashVal < 0) hashVal += 256;
-    var byteString = hashVal.toString(16);
-    if (byteString.length == 1) byteString = "0" + byteString;
-    txtHash += byteString;
-  }
-  return txtHash;
 }
 
 

@@ -19,31 +19,62 @@ export interface CheckInOutModalProps {
   isOpen: boolean;
   onClose: () => void;
   onBookingUpdated?: (updatedBooking: Booking) => void;
+  bookings?: Booking[];
 }
 
 export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
   isOpen,
   onClose,
   onBookingUpdated,
+  bookings = [],
 }) => {
   const toast = useToast();
   const [bookingCode, setBookingCode] = useState<string>('');
   const [fullName, setFullName] = useState<string>('');
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [recentBooking, setRecentBooking] = useState<{
+    booking_code: string;
+    full_name: string;
+    start_time?: string;
+    end_time?: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [elapsedMinutes, setElapsedMinutes] = useState<number>(0);
 
-  // เคลียร์ค่าเมื่อเปิด Modal
+  // ดึงข้อมูลการจองล่าสุดจาก localStorage เพื่อ Auto-fill อัตโนมัติเมื่อเปิด Modal
   useEffect(() => {
     if (isOpen) {
+      setIsLoading(false);
+      setActionLoading(false);
+
+      try {
+        const saved = localStorage.getItem('wtk_last_booking');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.booking_code && parsed.full_name) {
+            setRecentBooking(parsed);
+            setBookingCode(parsed.booking_code);
+            setFullName(parsed.full_name);
+
+            // หากมีใน bookings ปัจจุบัน ให้แสดงข้อมูลการจองทันที (0ms Instant Load)
+            const matched = bookings.find(
+              (b) => b.booking_code?.toUpperCase() === parsed.booking_code.toUpperCase()
+            );
+            if (matched) {
+              setBooking(matched);
+            }
+            return;
+          }
+        }
+      } catch (e) {}
+
       setBookingCode('');
       setFullName('');
       setBooking(null);
-      setIsLoading(false);
-      setActionLoading(false);
+      setRecentBooking(null);
     }
-  }, [isOpen]);
+  }, [isOpen, bookings]);
 
   // ตัวช่วยจัดฟอร์แมตรหัสจองอัตโนมัติ (auto uppercase และ auto ใส่ขีด MB-XXXX-XXXX)
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,22 +109,35 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
     return () => clearInterval(interval);
   }, [booking]);
 
-  // ค้นหาคิวการจอง
-  const handleLookup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!bookingCode.trim() || !fullName.trim()) {
+  // ค้นหาคิวการจอง (Instant SWR: แสดงผลจาก Local State ทันที 0ms + Sync เซิร์ฟเวอร์)
+  const handleLookup = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const code = bookingCode.trim().toUpperCase();
+    const name = fullName.trim();
+
+    if (!code || !name) {
       toast.error('กรุณากรอกข้อมูลให้ครบ', 'โปรดระบุทั้งรหัสการจองและชื่อ-นามสกุลจริง');
       return;
     }
 
+    // 1. ตรวจสอบจาก bookings ในหน่วยความจำก่อนทันที (0ms Instant Load)
+    const localMatch = bookings.find(
+      (b) => b.booking_code?.toUpperCase() === code
+    );
+    if (localMatch) {
+      setBooking(localMatch);
+    }
+
     setIsLoading(true);
     try {
-      const data = await lookupBooking(bookingCode.trim(), fullName.trim());
+      const data = await lookupBooking(code, name);
       setBooking(data);
       toast.success('พบข้อมูลการจอง', `คิวห้อง ${data.room_id} สถานะ: ${data.status}`);
     } catch (err: any) {
-      setBooking(null);
-      toast.error('ไม่พบข้อมูล', err.message || 'รหัสการจองหรือชื่อไม่ตรงกับในระบบ');
+      if (!localMatch) {
+        setBooking(null);
+        toast.error('ไม่พบข้อมูล', err.message || 'รหัสการจองหรือชื่อไม่ตรงกับในระบบ');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -167,6 +211,31 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
             กรอกรหัสการจองและชื่อจริงเพื่อเข้าใช้งานหรือคืนห้องซ้อม
           </p>
         </div>
+
+        {/* Quick Recent Booking Suggestion */}
+        {recentBooking && (
+          <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-xl flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <div>
+                <span className="text-[11px] text-slate-500 block">พบข้อมูลคิวล่าสุดของคุณ:</span>
+                <span className="font-bold text-primary font-mono">{recentBooking.booking_code}</span>
+                <span className="text-slate-600 ml-1.5 font-medium">({recentBooking.full_name})</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setBookingCode(recentBooking.booking_code);
+                setFullName(recentBooking.full_name);
+                handleLookup();
+              }}
+              className="px-3 py-1 bg-primary text-white text-[11px] font-semibold rounded-lg hover:bg-primary-dark transition-all shadow-sm flex-shrink-0"
+            >
+              โหลดคิวนี้ (0ms)
+            </button>
+          </div>
+        )}
 
         {/* Search Form */}
         <form onSubmit={handleLookup} className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">

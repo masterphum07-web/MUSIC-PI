@@ -304,7 +304,7 @@ function createBooking(rawPayload, context) {
     throw new Error("คุณ (" + payload.full_name + ") ได้ทำการจองครบโควตาสูงสุด " + maxBookingsPerDay + " ครั้งสำหรับวันนี้แล้ว");
   }
 
-  // 7. บันทึกข้อมูลลงฐานข้อมูลภายใต้ LockService
+  // 7. บันทึกข้อมูลลงฐานข้อมูลภายใต้ LockService (ครอบเฉพาะส่วนฐานข้อมูลเพื่อปลด Lock ให้เร็วที่สุด)
   var createdBooking = withLock(function() {
     // Re-check overlap ซ้ำอีกครั้งข้างใน Lock อย่างเคร่งครัด
     var overlap = isOverlapping(payload.room_id, payload.booking_date, payload.start_time, payload.end_time);
@@ -321,8 +321,8 @@ function createBooking(rawPayload, context) {
       booking_code: bookingCode,
       room_id: payload.room_id,
       booking_date: payload.booking_date,
-      start_time: payload.start_time,
-      end_time: payload.end_time,
+      start_time: formatTimeToHHmm(payload.start_time),
+      end_time: formatTimeToHHmm(payload.end_time),
       full_name: payload.full_name,
       student_year: payload.student_year,
       major: payload.major,
@@ -343,14 +343,17 @@ function createBooking(rawPayload, context) {
     };
 
     appendRow("Bookings", newBookingRow);
+    return newBookingRow;
+  });
 
-    // บันทึก Log
+  // บันทึก Log ภายนอก LockService
+  try {
     writeLog(
       "public",
       payload.full_name,
       "CREATE_BOOKING",
       "BOOKING",
-      bookingCode,
+      createdBooking.booking_code,
       {
         room_id: payload.room_id,
         date: payload.booking_date,
@@ -360,25 +363,25 @@ function createBooking(rawPayload, context) {
       context ? context.userAgent : "",
       context ? context.ipHash : ""
     );
+  } catch (logErr) {
+    Logger.log("writeLog error: " + logErr.message);
+  }
 
-    // ส่งอีเมลแจ้งเตือน
-    try {
-      sendNewBookingNotificationToAdmins(newBookingRow);
-      sendBookingConfirmationToUser(newBookingRow);
-    } catch (mailErr) {
-      Logger.log("ไม่สามารถส่งเมลแจ้งเตือนจองใหม่ได้: " + mailErr.message);
-    }
-
-    return newBookingRow;
-  });
+  // ส่งอีเมลแจ้งเตือนภายนอก LockService (Non-blocking) เพื่อให้ตอบกลับไคลเอนต์ได้ทันที
+  try {
+    sendNewBookingNotificationToAdmins(createdBooking);
+    sendBookingConfirmationToUser(createdBooking);
+  } catch (mailErr) {
+    Logger.log("ไม่สามารถส่งเมลแจ้งเตือนจองใหม่ได้: " + mailErr.message);
+  }
 
   return {
     booking_id: createdBooking.booking_id,
     booking_code: createdBooking.booking_code,
     room_id: createdBooking.room_id,
     booking_date: createdBooking.booking_date,
-    start_time: createdBooking.start_time,
-    end_time: createdBooking.end_time,
+    start_time: formatTimeToHHmm(createdBooking.start_time),
+    end_time: formatTimeToHHmm(createdBooking.end_time),
     full_name: createdBooking.full_name,
     status: createdBooking.status,
     created_at: createdBooking.created_at
@@ -430,8 +433,8 @@ function getPublicState(targetDate) {
         booking_code: b.booking_code,
         room_id: b.room_id,
         booking_date: bDateStr,
-        start_time: String(b.start_time).trim(),
-        end_time: String(b.end_time).trim(),
+        start_time: formatTimeToHHmm(b.start_time),
+        end_time: formatTimeToHHmm(b.end_time),
         full_name: displayName,
         student_year: b.student_year,
         major: b.major,
@@ -501,7 +504,9 @@ function lookupBooking(bookingCode, fullName) {
     throw new Error("ไม่พบข้อมูลการจองที่ตรงกับรหัสนี้");
   }
 
-  if (String(row.full_name).trim().toLowerCase() !== name.toLowerCase()) {
+  var rowName = String(row.full_name || "").trim().toLowerCase();
+  var inputName = name.toLowerCase();
+  if (rowName !== inputName && rowName.indexOf(inputName) === -1 && inputName.indexOf(rowName) === -1) {
     throw new Error("ชื่อ-นามสกุลไม่ตรงกับรหัสการจองนี้");
   }
 
@@ -510,8 +515,8 @@ function lookupBooking(bookingCode, fullName) {
     booking_code: row.booking_code,
     room_id: row.room_id,
     booking_date: formatDateToString(row.booking_date),
-    start_time: row.start_time,
-    end_time: row.end_time,
+    start_time: formatTimeToHHmm(row.start_time),
+    end_time: formatTimeToHHmm(row.end_time),
     full_name: row.full_name,
     student_year: row.student_year,
     major: row.major,

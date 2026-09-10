@@ -30,24 +30,59 @@ function sanitizeInput(val) {
 }
 
 /**
- * แปลงสตริงเวลา 'HH:mm' เป็นจำนวนนาทีนับจากเที่ยงคืน
- * @param {string} timeStr เช่น "08:30"
+ * แปลงสตริงเวลา 'HH:mm' หรือ Date เป็นจำนวนนาทีนับจากเที่ยงคืน
+ * @param {string|Date} timeVal เช่น "08:30" หรือ Date object
  * @returns {number} เช่น 510
  */
-function timeToMinutes(timeStr) {
-  if (!timeStr || typeof timeStr !== "string") {
-    return -1;
+function timeToMinutes(timeVal) {
+  if (!timeVal) return -1;
+  if (timeVal instanceof Date) {
+    return timeVal.getHours() * 60 + timeVal.getMinutes();
   }
-  var parts = timeStr.trim().split(":");
-  if (parts.length !== 2) {
-    return -1;
+  var timeStr = String(timeVal).trim();
+  // หากเป็นสตริงรูปแบบยาวที่มีเครื่องหมาย :
+  var parts = timeStr.split(":");
+  if (parts.length >= 2) {
+    // ดึงเฉพาะตัวเลขชั่วโมงและนาที
+    var hStr = parts[0].replace(/[^0-9]/g, "");
+    var mStr = parts[1].replace(/[^0-9]/g, "");
+    if (hStr.length > 2) hStr = hStr.slice(-2);
+    if (mStr.length > 2) mStr = mStr.slice(0, 2);
+    var hours = parseInt(hStr, 10);
+    var minutes = parseInt(mStr, 10);
+    if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+      return hours * 60 + minutes;
+    }
   }
-  var hours = parseInt(parts[0], 10);
-  var minutes = parseInt(parts[1], 10);
-  if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-    return -1;
+  return -1;
+}
+
+/**
+ * แปลงค่าเวลาใดๆ ให้เป็นสตริงมาตรฐาน 'HH:mm' เสมอ
+ * @param {*} timeVal Date object หรือ สตริงเวลา
+ * @returns {string} เช่น "16:00"
+ */
+function formatTimeToHHmm(timeVal) {
+  if (!timeVal) return "";
+  if (timeVal instanceof Date) {
+    var h = ("0" + timeVal.getHours()).slice(-2);
+    var m = ("0" + timeVal.getMinutes()).slice(-2);
+    return h + ":" + m;
   }
-  return hours * 60 + minutes;
+  var s = String(timeVal).trim();
+  if (s.indexOf(":") !== -1) {
+    var parts = s.split(":");
+    if (parts.length >= 2) {
+      var h2 = parts[0].replace(/[^0-9]/g, "");
+      var m2 = parts[1].replace(/[^0-9]/g, "");
+      if (h2.length > 2) h2 = h2.slice(-2);
+      if (m2.length > 2) m2 = m2.slice(0, 2);
+      if (h2.length > 0 && m2.length > 0) {
+        return ("0" + h2).slice(-2) + ":" + ("0" + m2).slice(-2);
+      }
+    }
+  }
+  return s;
 }
 
 /**

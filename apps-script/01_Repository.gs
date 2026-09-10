@@ -75,18 +75,40 @@ function getSheet(sheetName) {
   return sheet;
 }
 
+// In-Memory Cache ประจำรอบการประมวลผล (Request Scope) เพื่อตัดปัญหาอ่าน Sheets ซ้ำซ้อน
+var _CACHE_ROWS = {};
+
+/**
+ * เคลียร์แคชข้อมูลชีต
+ * @param {string} [sheetName] หากระบุจะเคลียร์เฉพาะแท็บนั้น หากไม่ระบุจะเคลียร์ทั้งหมด
+ */
+function clearCache(sheetName) {
+  if (sheetName) {
+    delete _CACHE_ROWS[sheetName];
+  } else {
+    _CACHE_ROWS = {};
+  }
+}
+
 /**
  * อ่านข้อมูลทั้งหมดในชีตเป็น Array of Objects ตามชื่อ Header ในแถวที่ 1
  * โดยอ่านแบบ Batch อ่านทั้ง Range ทีเดียว (ห้ามเรียก getRange ใน loop)
+ * พร้อมระบบ In-Memory Cache ป้องกันการอ่านชีตเดิมซ้ำในคำขอเดียวกัน
  * @param {string} sheetName ชื่อแท็บ
+ * @param {boolean} [forceRefresh] บังคับอ่านตรงจาก Google Sheets โดยไม่ใช้แคช
  * @returns {Array<Object>} อาร์เรย์ของออบเจ็กต์ข้อมูล
  */
-function getAllRows(sheetName) {
+function getAllRows(sheetName, forceRefresh) {
+  if (!forceRefresh && _CACHE_ROWS[sheetName]) {
+    return _CACHE_ROWS[sheetName];
+  }
+
   var sheet = getSheet(sheetName);
   var lastRow = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
 
   if (lastRow <= 1 || lastCol === 0) {
+    _CACHE_ROWS[sheetName] = [];
     return [];
   }
 
@@ -135,6 +157,7 @@ function getAllRows(sheetName) {
     rows.push(defaultRoom);
   }
 
+  _CACHE_ROWS[sheetName] = rows;
   return rows;
 }
 
@@ -200,6 +223,7 @@ function appendRow(sheetName, rowDataObj) {
   }
 
   sheet.appendRow(newRow);
+  clearCache(sheetName);
   rowDataObj._rowIndex = sheet.getLastRow();
   return rowDataObj;
 }
@@ -262,6 +286,7 @@ function updateRow(sheetName, idColumnName, idValue, updateFieldsObj) {
 
   // บันทึกเฉพาะแถวนั้นกลับลงชีตในรอบเดียว
   sheet.getRange(targetRowIdx + 1, 1, 1, lastCol).setValues([rowData]);
+  clearCache(sheetName);
 
   // สร้าง Object ผลลัพธ์ส่งคืน
   var resultObj = { _rowIndex: targetRowIdx + 1 };
@@ -286,6 +311,7 @@ function deleteRow(sheetName, idColumnName, idValue) {
   }
   var sheet = getSheet(sheetName);
   sheet.deleteRow(target._rowIndex);
+  clearCache(sheetName);
   return true;
 }
 
