@@ -22,11 +22,12 @@
   body {
     background-color: var(--surface);
     color: #1E293B;
-    font-family: 'Sarabun', sans-serif;
+    font-family: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-family: 'Prompt', 'IBM Plex Sans Thai', sans-serif;
+    font-weight: 700;
   }
 
   /* สำหรับตัวเลขและเวลา ให้ความกว้างตัวเลขเท่ากันตรงคอลัมน์ */

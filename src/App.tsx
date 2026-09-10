@@ -135,6 +135,7 @@ function AppContent() {
         onClose={() => setIsBookingOpen(false)}
         onSuccess={handleBookingSuccess}
         rooms={publicState?.rooms || []}
+        bookings={publicState?.bookings || []}
         settings={publicState?.settings}
         prefill={bookingPrefill}
       />

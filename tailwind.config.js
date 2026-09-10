@@ -30,8 +30,9 @@ export default {
         },
       },
       fontFamily: {
-        heading: ["'IBM Plex Sans Thai'", "sans-serif"],
-        body: ["'Sarabun'", "sans-serif"],
+        sans: ["'Prompt'", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        heading: ["'Prompt'", "'IBM Plex Sans Thai'", "sans-serif"],
+        body: ["'Prompt'", "sans-serif"],
       },
       borderRadius: {
         xl: "0.75rem",
