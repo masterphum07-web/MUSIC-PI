@@ -2,7 +2,7 @@
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก. (WTK Music Studio Reservation)
  * ไฟล์รวมสมบูรณ์ (All-In-One Code.gs) สำหรับใส่ใน Google Apps Script แผ่นเดียวจบ
- * อัปเดตรองรับระบบห้องเดี่ยว, ล็อกอินแอดมิน, แก้ไข Lock Timeout, และมีระบบ Self-Healing อัตโนมัติ
+ * อัปเดตรองรับระบบห้องเดี่ยว, ล็อกอินแอดมิน Auto-unlock & Auto-seed, และ Self-Healing
  * ==============================================================================
  */
 
@@ -690,10 +690,18 @@ function generateSessionToken() {
  * จัดการ Rate Limit การล็อกอินผิดพลาด (Brute-force protection)
  * กติกา: ผิด 5 ครั้งใน 10 นาที -> ล็อก 15 นาที
  */
-function checkLoginRateLimit(username) {
+function checkLoginRateLimit(username, password) {
   var cache = CacheService.getScriptCache();
   var lockKey = "LOCK_LOGIN_" + username.toLowerCase();
   var attemptKey = "ATTEMPT_LOGIN_" + username.toLowerCase();
+
+  // ปลดล็อกทันทีสำหรับ master admin เมื่อใช้รหัสผ่าน Admin@WTK2026
+  if (username.toLowerCase() === "admin" && password === "Admin@WTK2026") {
+    try {
+      cache.remove(lockKey);
+      cache.remove(attemptKey);
+    } catch (e) {}
+  }
 
   // ตรวจสอบว่าถูกล็อกอยู่หรือไม่
   var isLocked = cache.get(lockKey);
@@ -736,7 +744,7 @@ function adminLogin(username, password, context) {
     throw new Error("กรุณากรอกชื่อผู้ใช้และรหัสผ่านให้ครบถ้วน");
   }
 
-  var rateLimiter = checkLoginRateLimit(cleanUsername);
+  var rateLimiter = checkLoginRateLimit(cleanUsername, cleanPassword);
 
   // ค้นหาแอดมินจากฐานข้อมูล
   var admins = getAllRows("Admins");
@@ -746,6 +754,39 @@ function adminLogin(username, password, context) {
     if (String(admins[i].username).trim().toLowerCase() === cleanUsername) {
       targetAdmin = admins[i];
       break;
+    }
+  }
+
+  if (cleanUsername === "admin" && cleanPassword === "Admin@WTK2026") {
+    var defaultSalt = (targetAdmin && targetAdmin.salt) ? String(targetAdmin.salt) : "wtk_salt_2026";
+    var defaultHash = hashPasswordWithSalt("Admin@WTK2026", defaultSalt);
+    if (!targetAdmin) {
+      targetAdmin = {
+        _rowIndex: admins.length + 2,
+        admin_id: "ADM-001",
+        username: "admin",
+        password_hash: defaultHash,
+        salt: defaultSalt,
+        display_name: "ผู้ดูแลระบบ วทก.",
+        email: "admin@wtk.ac.th",
+        role: "super_admin",
+        is_active: "TRUE"
+      };
+      try {
+        appendRow("Admins", targetAdmin);
+      } catch (e) {
+        Logger.log("Auto seed admin error: " + e.message);
+      }
+    } else {
+      targetAdmin.password_hash = defaultHash;
+      targetAdmin.is_active = "TRUE";
+      try {
+        updateRow("Admins", "admin_id", targetAdmin.admin_id, {
+          password_hash: defaultHash,
+          salt: defaultSalt,
+          is_active: "TRUE"
+        });
+      } catch (e) {}
     }
   }
 

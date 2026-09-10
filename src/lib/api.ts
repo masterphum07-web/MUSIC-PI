@@ -27,7 +27,7 @@ interface RequestOptions {
  * ฟังก์ชันหลักในการยิงคำขอไปยัง Apps Script พร้อมระบบ Timeout และ Retry
  */
 async function callApi<T>(options: RequestOptions, maxRetries = 1): Promise<T> {
-  const timeoutMs = 15000;
+  const timeoutMs = 35000;
   let attempt = 0;
 
   while (attempt <= maxRetries) {
