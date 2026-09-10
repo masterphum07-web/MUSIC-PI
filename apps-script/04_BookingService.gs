@@ -7,6 +7,7 @@
  *           - สร้างรหัสจองรูปแบบ MB-YYMM-XXXX (ไม่ใช้อักขระสับสน)
  *           - กติกา: เวลาทำการ, ความยาวจอง, จองล่วงหน้า, โควตาต่อคน/วัน
  *           - ฟังก์ชัน เช็คอิน, เช็คเอาต์, ยกเลิกคิว, ค้นหาคิว, ดึง Public State
+ *           - ส่งการแจ้งเตือนอีเมลอัตโนมัติเมื่อเกิดกิจกรรม
  * ==============================================================================
  */
 
@@ -352,6 +353,14 @@ function createBooking(rawPayload, context) {
       context ? context.ipHash : ""
     );
 
+    // ส่งอีเมลแจ้งเตือน
+    try {
+      sendNewBookingNotificationToAdmins(newBookingRow);
+      sendBookingConfirmationToUser(newBookingRow);
+    } catch (mailErr) {
+      Logger.log("ไม่สามารถส่งเมลแจ้งเตือนจองใหม่ได้: " + mailErr.message);
+    }
+
     return newBookingRow;
   });
 
@@ -550,12 +559,15 @@ function checkIn(bookingCode, fullName, context) {
 
   // หากเลย start_time + grace_period ให้ปรับเป็น no_show
   if (currentMins > startMins + gracePeriod) {
-    updateRow("Bookings", "booking_code", booking.booking_code, {
+    var updatedNs = updateRow("Bookings", "booking_code", booking.booking_code, {
       status: "no_show",
       updated_at: now,
       updated_by: "system"
     });
     writeLog("system", "System Trigger", "MARK_NO_SHOW", "BOOKING", booking.booking_code, "เช็คอินสายเกินกำหนด");
+    try {
+      sendNoShowNotification(updatedNs || booking);
+    } catch (e) {}
     throw new Error("เลยเวลาเช็คอินที่กำหนด (" + gracePeriod + " นาที) ระบบได้ตัดสิทธิ์ No-show เรียบร้อยแล้ว");
   }
 
@@ -577,6 +589,11 @@ function checkIn(bookingCode, fullName, context) {
     context ? context.userAgent : "",
     context ? context.ipHash : ""
   );
+
+  // ส่งอีเมลแจ้งเตือน
+  try {
+    sendCheckInNotification(updated || booking);
+  } catch (e) {}
 
   return {
     success: true,
@@ -613,6 +630,11 @@ function checkOut(bookingCode, fullName, context) {
     context ? context.userAgent : "",
     context ? context.ipHash : ""
   );
+
+  // ส่งอีเมลแจ้งเตือน
+  try {
+    sendCheckOutNotification(updated || booking);
+  } catch (e) {}
 
   return {
     success: true,
@@ -660,6 +682,11 @@ function cancelBooking(bookingCode, fullName, cancelReason, context) {
     context ? context.userAgent : "",
     context ? context.ipHash : ""
   );
+
+  // ส่งอีเมลแจ้งเตือน
+  try {
+    sendCancellationNotification(updated || booking);
+  } catch (e) {}
 
   return {
     success: true,

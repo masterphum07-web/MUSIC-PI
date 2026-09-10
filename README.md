@@ -13,7 +13,7 @@
 - [x] **PHASE 1:** Data Layer (Google Sheets 7 แท็บ Schema, `00_Setup.gs`, `01_Repository.gs`)
 - [x] **PHASE 2:** Backend Core (Apps Script API - `02_Router.gs`, `03_Validation.gs`, `04_BookingService.gs`, `05_Logger.gs`, `99_Test.gs`)
 - [x] **PHASE 3:** Backend Admin + Auth (`06_Auth.gs`, `07_AdminService.gs`)
-- [ ] **PHASE 4:** ระบบอีเมล + Trigger อัตโนมัติ (`08_Mailer.gs`, `09_Triggers.gs`)
+- [x] **PHASE 4:** ระบบอีเมล + Trigger อัตโนมัติ (`08_Mailer.gs`, `09_Triggers.gs`)
 - [ ] **PHASE 5:** Frontend Setup + Design System (Vite + React + TS + Tailwind + shadcn/ui)
 - [ ] **PHASE 6:** หน้าหลัก (Public Dashboard & Timeline Grid)
 - [ ] **PHASE 7:** Flow การจอง + เช็คอิน/เช็คเอาต์
