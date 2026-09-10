@@ -2,7 +2,7 @@
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก. (WTK Music Studio Reservation)
  * ไฟล์รวมสมบูรณ์ (All-In-One Code.gs) สำหรับใส่ใน Google Apps Script แผ่นเดียวจบ
- * อัปเดตรองรับระบบห้องเดี่ยว, ล็อกอินแอดมิน, ป้องกัน Timeout/Lock และระบบอีเมล
+ * อัปเดตรองรับระบบห้องเดี่ยว, ล็อกอินแอดมิน, แก้ไข Lock Timeout, และมีระบบ Self-Healing อัตโนมัติ
  * ==============================================================================
  */
 
@@ -59,14 +59,28 @@ function withLock(callback, timeoutMs) {
   }
 }
 
-/**
- * ดึงออบเจ็กต์ Sheet ตามชื่อ หากไม่พบจะโยน Error
- * @param {string} sheetName ชื่อแท็บ
- * @returns {GoogleAppsScript.Spreadsheet.Sheet}
- */
 function getSheet(sheetName) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    throw new Error("ไม่สามารถเข้าถึง Spreadsheet ได้ กรุณาเปิด Apps Script จากส่วนเสริมของ Google Sheets");
+  }
   var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    try {
+      sheet = ss.insertSheet(sheetName);
+      if (typeof getDatabaseSchema === "function") {
+        var schema = getDatabaseSchema();
+        for (var i = 0; i < schema.length; i++) {
+          if (schema[i].sheetName === sheetName && schema[i].headers.length > 0) {
+            sheet.getRange(1, 1, 1, schema[i].headers.length).setValues([schema[i].headers]);
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      Logger.log("Auto-create sheet " + sheetName + " error: " + e.message);
+    }
+  }
   if (!sheet) {
     throw new Error("ไม่พบแท็บข้อมูลชื่อ: " + sheetName);
   }
@@ -113,6 +127,24 @@ function getAllRows(sheetName) {
     if (!isEmpty) {
       rows.push(obj);
     }
+  }
+
+  if (sheetName === "Rooms" && rows.length === 0) {
+    var defaultRoom = {
+      _rowIndex: 2,
+      room_id: "ROOM-01",
+      room_name: "ห้องซ้อมดนตรี ชมรมดนตรี วทก.",
+      capacity: 10,
+      equipment_list: "กลองชุด Pearl, แอมป์กีตาร์ Marshall x2, แอมป์เบส Fender, คีย์บอร์ด Roland, ไมโครโฟน Shure x3, PA System & มอนิเตอร์",
+      color_hex: "#0F3D5C",
+      is_active: "TRUE",
+      sort_order: 1,
+      image_url: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80"
+    };
+    try {
+      appendRow("Rooms", defaultRoom);
+    } catch (e) {}
+    rows.push(defaultRoom);
   }
 
   return rows;
@@ -274,14 +306,30 @@ function deleteRow(sheetName, idColumnName, idValue) {
  * @returns {Object} { key: value, ... }
  */
 function getSettingsMap() {
-  var rows = getAllRows("Settings");
-  var map = {};
-  for (var i = 0; i < rows.length; i++) {
-    var k = String(rows[i]["key"]).trim();
-    var v = rows[i]["value"];
-    if (k) {
-      map[k] = v;
+  var map = {
+    operating_hours_weekday: "08:00-20:00",
+    operating_hours_weekend: "09:00-18:00",
+    min_booking_minutes: "30",
+    max_booking_hours: "3",
+    advance_booking_days: "14",
+    grace_period_minutes: "30",
+    max_bookings_per_user_day: "2",
+    privacy_mode: "true",
+    system_status: "open",
+    announcement_text: "",
+    contact_info: ""
+  };
+  try {
+    var rows = getAllRows("Settings");
+    for (var i = 0; i < rows.length; i++) {
+      var k = String(rows[i]["key"]).trim();
+      var v = rows[i]["value"];
+      if (k) {
+        map[k] = v;
+      }
     }
+  } catch (e) {
+    Logger.log("getSettingsMap fallback: " + e.message);
   }
   return map;
 }
