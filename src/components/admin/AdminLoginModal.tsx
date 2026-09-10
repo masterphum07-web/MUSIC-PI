@@ -23,6 +23,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [loginStatus, setLoginStatus] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,19 +35,28 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
 
     setIsLoading(true);
     setError(null);
+    setLoginStatus('กำลังตรวจสอบสิทธิ์ผู้ดูแลระบบ...');
+
+    const timer = setTimeout(() => {
+      setLoginStatus('กำลังเชื่อมต่อฐานข้อมูล Google Apps Script...');
+    }, 2000);
 
     try {
       const res = await adminLogin(username.trim(), password.trim());
+      clearTimeout(timer);
+      setLoginStatus('เข้าสู่ระบบสำเร็จ! กำลังเปิดคอนโซล...');
       localStorage.setItem('wtk_admin_token', res.token);
       localStorage.setItem('wtk_admin_user', JSON.stringify(res.user));
       toast.success('เข้าสู่ระบบสำเร็จ', `ยินดีต้อนรับ ${res.user.display_name}`);
       onSuccess(res.token, res.user);
       onClose();
     } catch (err: any) {
+      clearTimeout(timer);
       setError(err.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       toast.error('เข้าสู่ระบบไม่สำเร็จ', err.message);
     } finally {
       setIsLoading(false);
+      setLoginStatus('');
     }
   };
 
@@ -140,9 +150,15 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
           </Button>
 
           {isLoading && (
-            <p className="text-center text-[11px] text-slate-500 animate-pulse">
-              กำลังเชื่อมต่อและยืนยันตัวตนกับฐานข้อมูล Google Apps Script...
-            </p>
+            <div className="p-3 bg-blue-50/80 border border-blue-200/80 rounded-2xl text-center space-y-1 animate-fade-in">
+              <div className="text-xs font-bold text-primary flex items-center justify-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-secondary animate-ping"></span>
+                <span>{loginStatus || 'กำลังเชื่อมต่อเซิร์ฟเวอร์...'}</span>
+              </div>
+              <p className="text-[10px] text-slate-500">
+                ระบบรักษาความปลอดภัยกำลังยืนยันตัวตน กรุณารอสักครู่
+              </p>
+            </div>
           )}
         </form>
       </div>

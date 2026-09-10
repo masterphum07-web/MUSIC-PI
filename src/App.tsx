@@ -13,7 +13,13 @@ import { OfflineBanner } from '@/components/common/OfflineBanner';
 import { Booking, PublicState, AdminUser } from '@/types';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState<'home' | 'admin'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'admin'>(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#admin') {
+      const savedToken = localStorage.getItem('wtk_admin_token');
+      if (savedToken) return 'admin';
+    }
+    return 'home';
+  });
   const [adminToken, setAdminToken] = useState<string | null>(() =>
     localStorage.getItem('wtk_admin_token')
   );
@@ -81,7 +87,15 @@ function AppContent() {
   };
 
   const handleOpenAdmin = () => {
-    if (adminToken) {
+    const savedToken = localStorage.getItem('wtk_admin_token');
+    const savedUser = localStorage.getItem('wtk_admin_user');
+    if (savedToken) {
+      setAdminToken(savedToken);
+      if (savedUser) {
+        try {
+          setAdminUser(JSON.parse(savedUser));
+        } catch {}
+      }
       setCurrentView('admin');
       window.location.hash = 'admin';
     } else {

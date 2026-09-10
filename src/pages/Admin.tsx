@@ -103,7 +103,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col justify-between">
+    <div className="min-h-screen bg-surface flex flex-col justify-between relative">
+      {/* Top Sync Indicator Bar */}
+      {isRefreshing && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-gradient-to-r from-secondary via-gold to-secondary animate-pulse" />
+      )}
+
       <div>
         {/* Admin Header */}
         <header className="sticky top-0 z-30 bg-primary text-white border-b border-primary-dark shadow-md">
@@ -230,7 +235,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 </div>
               )}
 
-              {dashboardData && <AdminOverview data={dashboardData} />}
+              {dashboardData && (
+                <AdminOverview
+                  data={dashboardData}
+                  adminUser={adminUser}
+                  onNavigateTab={(tab) => setActiveTab(tab)}
+                  onRefresh={() => loadDashboard(true)}
+                  isRefreshing={isRefreshing}
+                />
+              )}
             </>
           )}
 

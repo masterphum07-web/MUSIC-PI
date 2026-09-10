@@ -69,6 +69,11 @@ async function callApi<T>(options: RequestOptions, maxRetries = 1): Promise<T> {
     }
 
     if (!response.ok) {
+      attempt++;
+      if (attempt <= maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
@@ -76,6 +81,11 @@ async function callApi<T>(options: RequestOptions, maxRetries = 1): Promise<T> {
     try {
       json = await response.json();
     } catch {
+      attempt++;
+      if (attempt <= maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
       throw new Error('รูปแบบข้อมูลตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง');
     }
 
