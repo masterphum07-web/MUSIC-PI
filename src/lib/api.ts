@@ -26,16 +26,17 @@ interface RequestOptions {
 /**
  * ฟังก์ชันหลักในการยิงคำขอไปยัง Apps Script พร้อมระบบ Timeout และ Retry
  */
-async function callApi<T>(options: RequestOptions, maxRetries = 2): Promise<T> {
-  const timeoutMs = 20000; // 20 วินาที
+async function callApi<T>(options: RequestOptions, maxRetries = 1): Promise<T> {
+  const timeoutMs = 15000;
   let attempt = 0;
 
   while (attempt <= maxRetries) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+    let response: Response;
     try {
-      const response = await fetch(API_BASE_URL, {
+      response = await fetch(API_BASE_URL, {
         method: 'POST',
         headers: {
           // ใช้ text/plain;charset=utf-8 เพื่อเลี่ยง CORS preflight (OPTIONS)
@@ -50,41 +51,43 @@ async function callApi<T>(options: RequestOptions, maxRetries = 2): Promise<T> {
         }),
         signal: controller.signal,
       });
-
       clearTimeout(timer);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const json: ApiResponse<T> = await response.json();
-
-      if (!json.ok) {
-        throw new Error(json.error?.message || 'เกิดข้อผิดพลาดในการประมวลผล');
-      }
-
-      return json.data as T;
-    } catch (err: any) {
+    } catch (netErr: any) {
       clearTimeout(timer);
       attempt++;
+      const isTimeout = netErr.name === 'AbortError';
 
-      const isTimeout = err.name === 'AbortError';
-      const isLastAttempt = attempt > maxRetries;
-
-      if (isLastAttempt) {
+      if (attempt > maxRetries) {
         if (isTimeout) {
           throw new Error('การเชื่อมต่อไปยังเซิร์ฟเวอร์หมดเวลา (Timeout) กรุณาลองใหม่อีกครั้ง');
         }
-        throw new Error(err.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ต');
+        throw new Error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ต');
       }
 
-      // รอแบบ Exponential backoff: 1 วินาที, 2 วินาที
-      const delay = Math.pow(2, attempt - 1) * 1000;
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      continue;
     }
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    let json: ApiResponse<T>;
+    try {
+      json = await response.json();
+    } catch {
+      throw new Error('รูปแบบข้อมูลตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง');
+    }
+
+    // หากเป็น Business Logic Error จากเซิร์ฟเวอร์ ให้แสดงผลทันที ไม่ต้อง Retry ให้หมุนค้าง
+    if (!json.ok) {
+      throw new Error(json.error?.message || 'เกิดข้อผิดพลาดในการประมวลผล');
+    }
+
+    return json.data as T;
   }
 
-  throw new Error('การเชื่อมต่อล้มเหลวเกินจำนวนครั้งที่กำหนด');
+  throw new Error('การเชื่อมต่อล้มเหลว กรุณาลองใหม่อีกครั้ง');
 }
 
 // ==========================================
