@@ -8,7 +8,6 @@ import { RoomStatusCards } from '@/components/dashboard/RoomStatusCards';
 import { TimelineGrid } from '@/components/dashboard/TimelineGrid';
 import { TodaySummary } from '@/components/dashboard/TodaySummary';
 import { RulesFooter } from '@/components/dashboard/RulesFooter';
-import { Skeleton, ErrorState } from '@/components/common/States';
 import { RotateCw, Music } from 'lucide-react';
 import dayjs from 'dayjs';
 
@@ -21,6 +20,58 @@ export interface HomeProps {
   onStateLoaded?: (state: PublicState) => void;
 }
 
+// ข้อมูลเริ่มต้นสำหรับแสดงผลทันทีแบบ 0 ms ไม่ต้องรอโหลดหน้าจอเปล่า
+const DEFAULT_INITIAL_STATE: PublicState = {
+  selected_date: dayjs().format('YYYY-MM-DD'),
+  rooms: [
+    {
+      room_id: 'ROOM-01',
+      room_name: 'ห้องซ้อมดนตรี ชมรมดนตรี วทก.',
+      capacity: 10,
+      equipment_list: 'กลองชุด Pearl, แอมป์กีตาร์ Marshall, แอมป์เบส Fender, คีย์บอร์ด Roland, ไมโครโฟน Shure x2, PA System',
+      color_hex: '#1B7A8C',
+      sort_order: 1,
+    },
+  ],
+  bookings: [],
+  settings: {
+    operating_hours_weekday: '08:00-20:00',
+    operating_hours_weekend: '09:00-18:00',
+    min_booking_minutes: 60,
+    max_booking_hours: 3,
+    advance_booking_days: 14,
+    grace_period_minutes: 15,
+    privacy_mode: false,
+    system_status: 'open',
+    announcement_text: 'ยินดีต้อนรับสู่ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก. เปิดให้บริการ 08:00 - 20:00 น.',
+    contact_info: 'ชมรมดนตรี วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก (วทก.)',
+  },
+  blackouts: [],
+  server_time: dayjs().format('HH:mm:ss'),
+};
+
+const getInitialState = (date: string): PublicState => {
+  try {
+    const cached = localStorage.getItem(`wtk_cached_public_state_${date}`);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed && Array.isArray(parsed.rooms) && parsed.rooms.length > 0) {
+        return parsed;
+      }
+    }
+    const generalCached = localStorage.getItem('wtk_cached_public_state_latest');
+    if (generalCached) {
+      const parsed = JSON.parse(generalCached);
+      if (parsed && Array.isArray(parsed.rooms) && parsed.rooms.length > 0) {
+        return { ...parsed, bookings: [] };
+      }
+    }
+  } catch (e) {
+    console.warn('Cache read error:', e);
+  }
+  return DEFAULT_INITIAL_STATE;
+};
+
 export const Home: React.FC<HomeProps> = ({
   onOpenBookingModal,
   onOpenCheckInOutModal,
@@ -30,37 +81,45 @@ export const Home: React.FC<HomeProps> = ({
   onStateLoaded,
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>(() => dayjs().format('YYYY-MM-DD'));
-  const [state, setState] = useState<PublicState | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [state, setState] = useState<PublicState>(() => getInitialState(dayjs().format('YYYY-MM-DD')));
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
-  // ฟังก์ชันดึงข้อมูล Public State จาก Backend
-  const loadData = useCallback(async (date: string, isManualRefresh = false) => {
-    if (isManualRefresh) {
-      setIsRefreshing(true);
-    } else {
-      setIsLoading(true);
-    }
+  // ฟังก์ชันดึงข้อมูล Public State จาก Backend แบบ Stale-While-Revalidate
+  const loadData = useCallback(async (date: string, _isManualRefresh = false) => {
+    setIsRefreshing(true);
     setError(null);
 
     try {
       const res = await getPublicState(date);
       setState(res);
+      try {
+        localStorage.setItem(`wtk_cached_public_state_${date}`, JSON.stringify(res));
+        localStorage.setItem('wtk_cached_public_state_latest', JSON.stringify(res));
+      } catch {}
       if (onStateLoaded) onStateLoaded(res);
       setLastUpdated(dayjs().format('HH:mm:ss'));
     } catch (err: any) {
       console.error('Error fetching public state:', err);
-      setError(err.message || 'ไม่สามารถโหลดข้อมูลคิวห้องซ้อมได้ กรุณาตรวจสอบการเชื่อมต่อ');
+      // หากมีข้อมูลเดิมอยู่แล้ว ไม่ต้องแสดง Error เต็มจอ แค่แจ้งเตือน
+      setError(err.message || 'ไม่สามารถดึงข้อมูลคิวล่าสุดได้');
     } finally {
-      setIsLoading(false);
       setIsRefreshing(false);
     }
   }, [onStateLoaded]);
 
-  // ดึงข้อมูลครั้งแรก และเมื่อเลือกวันที่เปลี่ยนไป
+  // เมื่อเปลี่ยนวันที่ ให้โหลดจาก Cache ทันทีแล้ว Sync ข้อมูลจริงเบื้องหลัง
   useEffect(() => {
+    try {
+      const cached = localStorage.getItem(`wtk_cached_public_state_${selectedDate}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && Array.isArray(parsed.rooms)) {
+          setState(parsed);
+        }
+      }
+    } catch {}
     loadData(selectedDate);
   }, [selectedDate, loadData]);
 
@@ -89,7 +148,12 @@ export const Home: React.FC<HomeProps> = ({
   }, [state, selectedDate]);
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col justify-between">
+    <div className="min-h-screen bg-surface flex flex-col justify-between relative">
+      {/* Top Sync Indicator Bar */}
+      {isRefreshing && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-gradient-to-r from-secondary via-gold to-secondary animate-pulse" />
+      )}
+
       {/* 1. Header */}
       <div>
         <AppHeader
@@ -114,44 +178,32 @@ export const Home: React.FC<HomeProps> = ({
 
             <div className="flex items-center justify-between text-xs text-slate-500 px-1">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>อัปเดตอัตโนมัติทุก 60 วินาที</span>
+                <span className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-amber-400 animate-ping' : 'bg-emerald-500 animate-pulse'}`}></span>
+                <span>{isRefreshing ? 'กำลังเชื่อมต่อและตรวจสอบคิวล่าสุด...' : 'ข้อมูลคิวเป็นปัจจุบัน'}</span>
                 {lastUpdated && <span>(ล่าสุด {lastUpdated} น.)</span>}
               </div>
 
               <button
                 onClick={() => loadData(selectedDate, true)}
-                disabled={isRefreshing || isLoading}
+                disabled={isRefreshing}
                 className="inline-flex items-center gap-1.5 text-primary hover:text-primary-dark font-medium transition-colors focus:outline-none disabled:opacity-50"
               >
-                <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-secondary' : ''}`} />
                 <span>รีเฟรชข้อมูล</span>
               </button>
             </div>
           </div>
 
-          {/* Error State */}
-          {error && !state && (
-            <ErrorState
-              message={error}
-              onRetry={() => loadData(selectedDate)}
-            />
-          )}
-
-          {/* Loading Skeleton */}
-          {isLoading && !state && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} className="h-24 w-full" />
-                ))}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-48 w-full" />
-                ))}
-              </div>
-              <Skeleton className="h-80 w-full" />
+          {/* Warning Banner if fetch failed but cached data is showing */}
+          {error && (
+            <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs flex items-center justify-between shadow-sm">
+              <span>⚠️ แสดงข้อมูลจากแคชล่าสุด ({error})</span>
+              <button
+                onClick={() => loadData(selectedDate, true)}
+                className="font-bold underline ml-2 text-primary hover:text-primary-dark"
+              >
+                ลองเชื่อมต่อใหม่
+              </button>
             </div>
           )}
 

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DashboardData, AdminUser } from '@/types';
 import { adminGetDashboard, adminLogout } from '@/lib/api';
 import { AdminOverview } from '@/components/admin/AdminOverview';
@@ -17,7 +17,6 @@ import {
   ShieldCheck,
   LogOut,
   ArrowLeft,
-  Music,
   FileText,
   RotateCw,
 } from 'lucide-react';
@@ -40,20 +39,32 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     'overview' | 'reservations' | 'recipients' | 'settings' | 'logs'
   >('overview');
 
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => {
+    try {
+      const cached = localStorage.getItem('wtk_admin_dashboard_cache');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return null;
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    return !localStorage.getItem('wtk_admin_dashboard_cache');
+  });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadDashboard = useCallback(
     async (isManual = false) => {
       if (isManual) setIsRefreshing(true);
-      else setIsLoading(true);
+      else if (!localStorage.getItem('wtk_admin_dashboard_cache')) setIsLoading(true);
+      else setIsRefreshing(true);
       setError(null);
 
       try {
         const data = await adminGetDashboard(token);
         setDashboardData(data);
+        try {
+          localStorage.setItem('wtk_admin_dashboard_cache', JSON.stringify(data));
+        } catch {}
       } catch (err: any) {
         setError(err.message || 'ไม่สามารถโหลดข้อมูลสถิติหลังบ้านได้');
         toast.error('เกิดข้อผิดพลาด', err.message);
@@ -78,6 +89,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     }
     localStorage.removeItem('wtk_admin_token');
     localStorage.removeItem('wtk_admin_user');
+    localStorage.removeItem('wtk_admin_dashboard_cache');
     toast.success('ออกจากระบบแล้ว', 'กลับสู่หน้าหลักสำหรับผู้ใช้งานทั่วไป');
     onLogout();
   };
@@ -111,8 +123,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 <div className="h-6 w-px bg-white/20 hidden sm:block" />
 
                 <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-white text-primary flex items-center justify-center font-bold shadow-sm">
-                    <Music className="w-5 h-5 text-secondary" />
+                  <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+                    <img
+                      src={`${import.meta.env.BASE_URL}logo.png`}
+                      alt="ตราสัญลักษณ์ วทก."
+                      className="w-full h-full object-contain drop-shadow-sm"
+                    />
                   </div>
                   <div>
                     <div className="text-[10px] uppercase font-bold text-gold tracking-wider">

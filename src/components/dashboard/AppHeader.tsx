@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Clock, CalendarPlus, LogIn, KeyRound } from 'lucide-react';
+import { Clock, CalendarPlus, LogIn, KeyRound } from 'lucide-react';
 import { Button } from '@/components/common/Button';
 import dayjs from 'dayjs';
 
@@ -35,8 +35,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <div className="flex items-center justify-between h-20">
           {/* Logo & Title */}
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-md shadow-primary/20 flex-shrink-0">
-              <Music className="w-6 h-6 text-gold" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center flex-shrink-0">
+              <img
+                src={`${import.meta.env.BASE_URL}logo.png`}
+                alt="ตราสัญลักษณ์ วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก"
+                className="w-full h-full object-contain drop-shadow-md hover:scale-105 transition-transform"
+              />
             </div>
             <div>
               <div className="text-[11px] font-bold text-secondary tracking-wider uppercase flex items-center gap-1.5">

@@ -1,11 +1,11 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';
 import { adminLogin } from '@/lib/api';
 import { AdminUser } from '@/types';
 import { useToast } from '@/components/common/Toast';
-import { ShieldCheck, Eye, EyeOff, Lock, User, Info } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, Info } from 'lucide-react';
 
 export interface AdminLoginModalProps {
   isOpen: boolean;
@@ -55,8 +55,12 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
       <div className="space-y-5 py-1">
         {/* Header Icon */}
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mx-auto shadow-sm">
-            <ShieldCheck className="w-7 h-7" />
+          <div className="w-16 h-16 mx-auto flex items-center justify-center">
+            <img
+              src={`${import.meta.env.BASE_URL}logo.png`}
+              alt="ตราสัญลักษณ์ วทก."
+              className="w-full h-full object-contain drop-shadow-md"
+            />
           </div>
           <h2 className="text-lg font-bold text-primary">เข้าสู่ระบบผู้ดูแลระบบ</h2>
           <p className="text-xs text-slate-500">
@@ -132,8 +136,14 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
             loading={isLoading}
             className="w-full font-bold shadow-md"
           >
-            เข้าสู่ระบบ Admin Console
+            {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ Admin Console'}
           </Button>
+
+          {isLoading && (
+            <p className="text-center text-[11px] text-slate-500 animate-pulse">
+              กำลังเชื่อมต่อและยืนยันตัวตนกับฐานข้อมูล Google Apps Script...
+            </p>
+          )}
         </form>
       </div>
     </Modal>
