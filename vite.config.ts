@@ -15,4 +15,15 @@ export default defineConfig({
     port: 3000,
     open: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-recharts': ['recharts'],
+          'vendor-utils': ['dayjs', 'lucide-react', 'clsx', 'tailwind-merge'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
 });

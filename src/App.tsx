@@ -8,6 +8,8 @@ import { BookingModal } from '@/components/booking/BookingModal';
 import { BookingSuccessModal } from '@/components/booking/BookingSuccessModal';
 import { CheckInOutModal } from '@/components/checkin/CheckInOutModal';
 import { AdminLoginModal } from '@/components/admin/AdminLoginModal';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { OfflineBanner } from '@/components/common/OfflineBanner';
 import { Booking, PublicState, AdminUser } from '@/types';
 
 function AppContent() {
@@ -225,9 +227,12 @@ function AppContent() {
 
 export function App() {
   return (
-    <ToastProvider>
-      <AppContent />
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <OfflineBanner />
+        <AppContent />
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
 
