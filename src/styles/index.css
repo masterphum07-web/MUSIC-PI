@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary: #0F3D5C;
+    --primary-dark: #0A283D;
+    --primary-light: #1A547A;
+    --secondary: #1B7A8C;
+    --secondary-light: #2596AC;
+    --gold: #C9A227;
+    --gold-light: #DFB738;
+    --success: #16A34A;
+    --warning: #F59E0B;
+    --danger: #DC2626;
+    --surface: #F8FAFC;
+    --surface-card: #FFFFFF;
+    --surface-border: #E2E8F0;
+  }
+
+  body {
+    background-color: var(--surface);
+    color: #1E293B;
+    font-family: 'Sarabun', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+  }
+
+  /* สำหรับตัวเลขและเวลา ให้ความกว้างตัวเลขเท่ากันตรงคอลัมน์ */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Custom Scrollbar เรียบหรู */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
