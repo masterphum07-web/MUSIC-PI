@@ -120,6 +120,14 @@ function formatDateToString(val) {
 function checkAvailability(roomId, dateStr, startTime, endTime) {
   // 1. ตรวจสอบว่าห้องมีอยู่จริงและเปิดใช้งาน
   var room = findRowById("Rooms", "room_id", roomId);
+  if (!room) {
+    // Graceful fallback สำหรับระบบห้องเดี่ยว หรือกรณี sheet เป็น ROOM-A / ROOM-01
+    var allRooms = getAllRows("Rooms");
+    if (allRooms.length > 0) {
+      room = allRooms[0];
+      roomId = room.room_id;
+    }
+  }
   if (!room || String(room.is_active).toUpperCase() !== "TRUE") {
     return { available: false, reason: "ห้องซ้อมนี้ไม่เปิดให้บริการ" };
   }
