@@ -86,7 +86,12 @@ export const Home: React.FC<HomeProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
-  // ฟังก์ชันดึงข้อมูล Public State จาก Backend แบบ Stale-While-Revalidate
+  const onStateLoadedRef = React.useRef(onStateLoaded);
+  useEffect(() => {
+    onStateLoadedRef.current = onStateLoaded;
+  }, [onStateLoaded]);
+
+  // ฟังก์ชันดึงข้อมูล Public State จาก Backend แบบ Stale-While-Revalidate (Stable callback ป้องกัน infinite loop)
   const loadData = useCallback(async (date: string, _isManualRefresh = false) => {
     setIsRefreshing(true);
     setError(null);
@@ -98,7 +103,7 @@ export const Home: React.FC<HomeProps> = ({
         localStorage.setItem(`wtk_cached_public_state_${date}`, JSON.stringify(res));
         localStorage.setItem('wtk_cached_public_state_latest', JSON.stringify(res));
       } catch {}
-      if (onStateLoaded) onStateLoaded(res);
+      if (onStateLoadedRef.current) onStateLoadedRef.current(res);
       setLastUpdated(dayjs().format('HH:mm:ss'));
     } catch (err: any) {
       console.error('Error fetching public state:', err);
@@ -107,7 +112,7 @@ export const Home: React.FC<HomeProps> = ({
     } finally {
       setIsRefreshing(false);
     }
-  }, [onStateLoaded]);
+  }, []);
 
   // เมื่อเปลี่ยนวันที่ ให้โหลดจาก Cache ทันทีแล้ว Sync ข้อมูลจริงเบื้องหลัง
   useEffect(() => {

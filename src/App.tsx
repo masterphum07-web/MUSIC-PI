@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Home } from '@/pages/Home';
 import { AdminPage } from '@/pages/Admin';
 import { ToastProvider } from '@/components/common/Toast';
@@ -78,7 +78,7 @@ function AppContent() {
     return () => window.removeEventListener('hashchange', checkHash);
   }, []);
 
-  const handleOpenBooking = (prefill?: {
+  const handleOpenBooking = useCallback((prefill?: {
     roomId?: string;
     date?: string;
     startTime?: string;
@@ -86,26 +86,26 @@ function AppContent() {
   }) => {
     setBookingPrefill(prefill);
     setIsBookingOpen(true);
-  };
+  }, []);
 
-  const handleOpenCheckIn = (tab: 'checkin' | 'checkout' | 'lookup' = 'checkin', code?: string) => {
+  const handleOpenCheckIn = useCallback((tab: 'checkin' | 'checkout' | 'lookup' = 'checkin', code?: string) => {
     setCheckInOutTab(tab);
     if (code) setInitialBookingCode(code);
     setIsCheckInOutOpen(true);
-  };
+  }, []);
 
-  const handleBookingSuccess = (createdBooking: Booking) => {
+  const handleBookingSuccess = useCallback((createdBooking: Booking) => {
     setIsBookingOpen(false);
     setNewBooking(createdBooking);
     setIsSuccessOpen(true);
     setRefreshTrigger((prev) => prev + 1);
-  };
+  }, []);
 
-  const handleBookingUpdated = (_updatedBooking: Booking) => {
+  const handleBookingUpdated = useCallback((_updatedBooking: Booking) => {
     setRefreshTrigger((prev) => prev + 1);
-  };
+  }, []);
 
-  const handleOpenAdmin = () => {
+  const handleOpenAdmin = useCallback(() => {
     const savedToken = localStorage.getItem('wtk_admin_token');
     const savedUser = localStorage.getItem('wtk_admin_user');
     if (savedToken) {
@@ -120,7 +120,15 @@ function AppContent() {
     } else {
       setIsAdminLoginOpen(true);
     }
-  };
+  }, []);
+
+  const handleSelectBookingDetail = useCallback((booking: Booking) => {
+    setSelectedBooking(booking);
+  }, []);
+
+  const handleStateLoaded = useCallback((state: PublicState) => {
+    setPublicState(state);
+  }, []);
 
   const handleAdminLoginSuccess = (token: string, user: AdminUser) => {
     setAdminToken(token);
@@ -159,9 +167,9 @@ function AppContent() {
         onOpenBookingModal={handleOpenBooking}
         onOpenCheckInOutModal={handleOpenCheckIn}
         onOpenAdminLogin={handleOpenAdmin}
-        onSelectBookingDetail={(booking) => setSelectedBooking(booking)}
+        onSelectBookingDetail={handleSelectBookingDetail}
         refreshTrigger={refreshTrigger}
-        onStateLoaded={(state) => setPublicState(state)}
+        onStateLoaded={handleStateLoaded}
       />
 
       {/* 1. Modal ฟอร์มจองห้องซ้อมดนตรี (Phase 7) */}
