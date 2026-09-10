@@ -458,7 +458,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 size="md"
                 disabled={!availabilityStatus.available}
                 onClick={() => setCurrentStep(2)}
-                className="font-bold px-6 shadow-md"
+                className="font-bold px-6 shadow-md w-full sm:w-auto"
               >
                 ถัดไป: กรอกข้อมูลผู้จอง
               </Button>
@@ -608,8 +608,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-between pt-3">
-              <Button variant="outline" size="md" onClick={() => setCurrentStep(1)}>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-3">
+              <Button variant="outline" size="md" onClick={() => setCurrentStep(1)} className="w-full sm:w-auto">
                 ย้อนกลับ
               </Button>
               <Button
@@ -618,7 +618,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 onClick={() => {
                   if (validateStep2()) setCurrentStep(3);
                 }}
-                className="font-bold px-6"
+                className="font-bold px-6 w-full sm:w-auto"
               >
                 ถัดไป: ตรวจสอบและยืนยัน
               </Button>
@@ -725,12 +725,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
             )}
 
-            <div className={`flex justify-between pt-3 ${isSubmitting ? 'pointer-events-none opacity-80' : ''}`}>
+            <div className={`flex flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-3 ${isSubmitting ? 'pointer-events-none opacity-80' : ''}`}>
               <Button
                 variant="outline"
                 size="md"
                 onClick={() => setCurrentStep(2)}
                 disabled={isSubmitting}
+                className="w-full sm:w-auto"
               >
                 ย้อนกลับ
               </Button>
@@ -740,7 +741,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 onClick={handleConfirmBooking}
                 loading={isSubmitting}
                 disabled={!acceptedTerms || isSubmitting}
-                className="font-bold px-8 shadow-md"
+                className="font-bold px-5 sm:px-8 shadow-md w-full sm:w-auto"
               >
                 {isSubmitting ? 'กำลังบันทึกคิว...' : 'ยืนยันการจองห้องซ้อมดนตรี 🎸'}
               </Button>

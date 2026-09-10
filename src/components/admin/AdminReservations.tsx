@@ -247,7 +247,7 @@ export const AdminReservations: React.FC<AdminReservationsProps> = ({ token }) =
 
       {/* Bookings Table */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
               <tr>

@@ -78,7 +78,7 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <Button
               size="sm"
               variant="outline"

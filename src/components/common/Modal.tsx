@@ -56,7 +56,7 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -74,7 +74,7 @@ export const Modal: React.FC<ModalProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className={cn(
-              'relative w-full bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-10 my-8',
+              'relative w-full bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-10 my-3 sm:my-8',
               maxWidths[maxWidth]
             )}
             role="dialog"
@@ -82,9 +82,9 @@ export const Modal: React.FC<ModalProps> = ({
           >
             {/* Header */}
             {(title || showCloseButton) && (
-              <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100">
+              <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-slate-100">
                 <div>
-                  {title && <h3 className="text-lg font-bold text-primary">{title}</h3>}
+                  {title && <h3 className="text-base sm:text-lg font-bold text-primary">{title}</h3>}
                   {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
                 </div>
                 {showCloseButton && (
@@ -100,7 +100,12 @@ export const Modal: React.FC<ModalProps> = ({
             )}
 
             {/* Body */}
-            <div className="px-6 py-5 max-h-[calc(85vh-120px)] overflow-y-auto">{children}</div>
+            <div
+              className="px-4 sm:px-6 py-4 sm:py-5 max-h-[calc(90vh-90px)] sm:max-h-[calc(85vh-120px)] overflow-y-auto overscroll-contain"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              {children}
+            </div>
           </motion.div>
         </div>
       )}

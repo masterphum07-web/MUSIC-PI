@@ -111,11 +111,25 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({
       {/* MODE 1: Interactive Timeline Grid                    */}
       {/* ---------------------------------------------------- */}
       {viewMode === 'grid' && (
-        <div className="relative overflow-x-auto select-none pb-4">
+        <div className="relative overflow-x-auto select-none pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {/* Mobile / Tablet Swipe Hint */}
+          <div className="lg:hidden flex items-center justify-between px-3 py-2 mb-2.5 bg-sky-50/80 text-sky-800 rounded-xl text-xs font-medium border border-sky-200/70">
+            <span className="flex items-center gap-1.5">
+              <span>👉</span>
+              <span>เลื่อนแนวนอนเพื่อดูเวลาทั้งหมด</span>
+            </span>
+            <button
+              onClick={() => setViewMode('list')}
+              className="font-bold underline text-primary hover:text-primary-dark ml-2 shrink-0 cursor-pointer"
+            >
+              สลับเป็นมุมมองรายการ
+            </button>
+          </div>
+
           <div className="min-w-[960px] relative">
             {/* Header: Time Axis */}
             <div className="flex border-b border-slate-200 pb-2 mb-2">
-              <div className="w-48 flex-shrink-0 text-xs font-bold text-slate-400 pl-2">
+              <div className="w-48 flex-shrink-0 text-xs font-bold text-slate-500 pl-2 sticky left-0 bg-white z-10">
                 ห้องซ้อม / เวลา
               </div>
               <div className="flex-1 relative flex">
@@ -164,8 +178,8 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({
                     key={room.room_id}
                     className="flex items-center group/row rounded-xl hover:bg-slate-50/70 transition-colors p-1 border border-slate-100"
                   >
-                    {/* Room Info Left Column */}
-                    <div className="w-48 flex-shrink-0 pr-3 pl-2">
+                    {/* Room Info Left Column (Sticky on mobile scroll) */}
+                    <div className="w-48 flex-shrink-0 pr-3 pl-2 sticky left-0 bg-white group-hover/row:bg-slate-50 transition-colors z-10 border-r border-slate-100 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)]">
                       <div className="flex items-center gap-2">
                         <span
                           className="w-2.5 h-2.5 rounded-full flex-shrink-0"

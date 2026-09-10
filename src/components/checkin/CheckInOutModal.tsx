@@ -254,40 +254,42 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('checkin')}
-            className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+            className={`py-2 px-1.5 sm:px-3 rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
               activeTab === 'checkin'
                 ? 'bg-emerald-600 text-white shadow-sm font-bold'
                 : 'text-slate-600 hover:text-primary hover:bg-white/60'
             }`}
           >
-            <CheckCircle2 className="w-3.5 h-3.5" />
+            <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
             <span>เช็คอิน</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('checkout')}
-            className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+            className={`py-2 px-1.5 sm:px-3 rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
               activeTab === 'checkout'
                 ? 'bg-primary text-white shadow-sm font-bold'
                 : 'text-slate-600 hover:text-primary hover:bg-white/60'
             }`}
           >
-            <DoorClosed className="w-3.5 h-3.5" />
-            <span>เช็คเอาต์ คืนห้อง</span>
+            <DoorClosed className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="hidden sm:inline">เช็คเอาต์</span>
+            <span>คืนห้อง</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('lookup')}
-            className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+            className={`py-2 px-1.5 sm:px-3 rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
               activeTab === 'lookup'
                 ? 'bg-slate-800 text-white shadow-sm font-bold'
                 : 'text-slate-600 hover:text-primary hover:bg-white/60'
             }`}
           >
-            <Search className="w-3.5 h-3.5" />
-            <span>❌ ยกเลิก / ตรวจสอบ</span>
+            <Search className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="hidden sm:inline">ยกเลิก / </span>
+            <span>ตรวจคิว</span>
           </button>
         </div>
 

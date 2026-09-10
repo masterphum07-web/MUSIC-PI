@@ -31,32 +31,31 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo & Title */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0">
               <img
                 src={`${import.meta.env.BASE_URL}logo.png`}
                 alt="ตราสัญลักษณ์ วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก"
                 className="w-full h-full object-contain drop-shadow-md hover:scale-105 transition-transform"
               />
             </div>
-            <div>
-              <div className="text-[11px] font-bold text-secondary tracking-wider uppercase flex items-center gap-1.5">
+            <div className="min-w-0">
+              <div className="text-[10px] sm:text-[11px] font-bold text-secondary tracking-wider uppercase flex items-center gap-1 truncate">
                 <span>วทก.</span>
-                <span className="inline-block w-1 h-1 rounded-full bg-secondary/50"></span>
-                <span className="hidden sm:inline">วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก</span>
+                <span className="hidden sm:inline">• วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก</span>
               </div>
-              <h1 className="text-base sm:text-lg font-bold text-primary tracking-tight leading-tight">
-                ระบบจองห้องซ้อมดนตรี ชมรมดนตรี
+              <h1 className="text-xs sm:text-base lg:text-lg font-bold text-primary tracking-tight leading-tight truncate">
+                ระบบจองห้องซ้อมดนตรี <span className="hidden xs:inline">ชมรมดนตรี</span>
               </h1>
             </div>
           </div>
 
           {/* Right Actions & Real-time Clock */}
-          <div className="flex items-center gap-3">
-            {/* Real-time Clock (Desktop) */}
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+            {/* Real-time Clock (Desktop / iPad landscape) */}
             <div className="hidden lg:flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700">
               <Clock className="w-4 h-4 text-secondary flex-shrink-0 animate-pulse" />
               <div className="text-right">
@@ -70,20 +69,20 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             </div>
 
             {/* Main Action Buttons */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <Button
                 variant="gold"
                 size="sm"
                 onClick={onOpenBooking}
-                className="shadow-sm font-semibold text-xs sm:text-sm px-2.5 sm:px-4"
+                className="shadow-sm font-bold text-xs sm:text-sm px-2.5 sm:px-3.5 py-1.5"
               >
                 <CalendarPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 text-amber-950" />
-                <span>จองห้องซ้อม</span>
+                <span>จองห้อง</span>
               </Button>
 
               <button
                 onClick={() => onOpenCheckIn('checkin')}
-                className="inline-flex items-center justify-center font-medium transition-all text-xs px-2.5 sm:px-3.5 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 shadow-sm"
+                className="inline-flex items-center justify-center font-bold text-xs px-2.5 sm:px-3.5 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 shadow-sm"
                 title="เช็คอินเข้าใช้งานห้องซ้อม"
               >
                 <LogIn className="w-3.5 h-3.5 mr-1 text-emerald-600" />
@@ -92,7 +91,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
               <button
                 onClick={() => onOpenCheckIn('checkout')}
-                className="hidden sm:inline-flex items-center justify-center font-medium transition-all text-xs px-2.5 sm:px-3.5 py-1.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 shadow-sm"
+                className="hidden md:inline-flex items-center justify-center font-bold text-xs px-2.5 sm:px-3.5 py-1.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 shadow-sm"
                 title="เช็คเอาต์ คืนห้องซ้อม"
               >
                 <LogOut className="w-3.5 h-3.5 mr-1 text-amber-600" />

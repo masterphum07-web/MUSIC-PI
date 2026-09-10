@@ -112,42 +112,42 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       <div>
         {/* Admin Header */}
         <header className="sticky top-0 z-30 bg-primary text-white border-b border-primary-dark shadow-md">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-20">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16 sm:h-20">
               {/* Back to Home & Logo */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <button
                   onClick={onBackToHome}
-                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center gap-1.5 text-xs font-semibold"
+                  className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center gap-1.5 text-xs font-semibold shrink-0"
                   title="กลับหน้าจอหลักของนักศึกษา"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  <span className="hidden sm:inline">กลับหน้าเว็บหลัก</span>
+                  <span className="hidden sm:inline">หน้าหลัก</span>
                 </button>
 
-                <div className="h-6 w-px bg-white/20 hidden sm:block" />
+                <div className="h-6 w-px bg-white/20 hidden sm:block shrink-0" />
 
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center flex-shrink-0">
                     <img
                       src={`${import.meta.env.BASE_URL}logo.png`}
                       alt="ตราสัญลักษณ์ วทก."
                       className="w-full h-full object-contain drop-shadow-sm"
                     />
                   </div>
-                  <div>
-                    <div className="text-[10px] uppercase font-bold text-gold tracking-wider">
+                  <div className="min-w-0">
+                    <div className="text-[9px] sm:text-[10px] uppercase font-bold text-gold tracking-wider truncate">
                       Admin Console
                     </div>
-                    <h1 className="text-base font-bold leading-tight">
-                      ระบบจัดการหลังบ้าน ชมรมดนตรี วทก.
+                    <h1 className="text-xs sm:text-base font-bold leading-tight truncate">
+                      ระบบจัดการหลังบ้าน วทก.
                     </h1>
                   </div>
                 </div>
               </div>
 
               {/* Admin User Info & Logout */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                 <div className="hidden md:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl text-xs border border-white/15">
                   <ShieldCheck className="w-4 h-4 text-gold" />
                   <div>
@@ -164,16 +164,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={handleLogoutClick}
-                  className="bg-white/10 hover:bg-rose-600 hover:border-rose-600 text-white border-white/20 text-xs transition-colors"
+                  className="bg-white/10 hover:bg-rose-600 hover:border-rose-600 text-white border-white/20 text-xs transition-colors px-2.5 sm:px-3 py-1.5"
                 >
-                  <LogOut className="w-3.5 h-3.5 mr-1" />
+                  <LogOut className="w-3.5 h-3.5 sm:mr-1" />
                   <span className="hidden sm:inline">ออกจากระบบ</span>
                 </Button>
               </div>
             </div>
 
             {/* Navigation Tabs Bar */}
-            <div className="flex space-x-1 overflow-x-auto pb-1 pt-1 scrollbar-none">
+            <div
+              className="flex space-x-1 overflow-x-auto pb-2 pt-1 scrollbar-none"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;

@@ -82,7 +82,7 @@ export const DateStrip: React.FC<DateStripProps> = ({
       <div
         ref={scrollRef}
         className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none scroll-smooth"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
       >
         {days.map((item) => {
           const isSelected = item.dateStr === selectedDate;
