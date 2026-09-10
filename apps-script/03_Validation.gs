@@ -1,0 +1,204 @@
+/**
+ * ==============================================================================
+ * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
+ * ไฟล์: 03_Validation.gs
+ * คำอธิบาย: โมดูลตรวจสอบความถูกต้องของข้อมูล (Validation & Sanitization)
+ *           - ป้องกัน Formula Injection ใน Google Sheets (=, +, -, @)
+ *           - ตรวจสอบรูปแบบวันที่, เวลา, ชั้นปี, สาขา, ชื่อ-นามสกุล
+ *           - ฟังก์ชันย่อชื่อ (Mask Name) เพื่อความเป็นส่วนตัว (PDPA)
+ * ==============================================================================
+ */
+
+/**
+ * ทำความสะอาดข้อความเพื่อป้องกัน Formula Injection และตัดช่องว่างส่วนเกิน
+ * หากขึ้นต้นด้วย =, +, -, @ จะเติม Single Quote (') นำหน้า
+ * @param {*} val ข้อความนำเข้า
+ * @returns {string} ข้อความที่ปลอดภัย
+ */
+function sanitizeInput(val) {
+  if (val === null || typeof val === "undefined") {
+    return "";
+  }
+  var str = String(val).trim();
+  if (str.length > 0) {
+    var firstChar = str.charAt(0);
+    if (firstChar === "=" || firstChar === "+" || firstChar === "-" || firstChar === "@") {
+      str = "'" + str;
+    }
+  }
+  return str;
+}
+
+/**
+ * แปลงสตริงเวลา 'HH:mm' เป็นจำนวนนาทีนับจากเที่ยงคืน
+ * @param {string} timeStr เช่น "08:30"
+ * @returns {number} เช่น 510
+ */
+function timeToMinutes(timeStr) {
+  if (!timeStr || typeof timeStr !== "string") {
+    return -1;
+  }
+  var parts = timeStr.trim().split(":");
+  if (parts.length !== 2) {
+    return -1;
+  }
+  var hours = parseInt(parts[0], 10);
+  var minutes = parseInt(parts[1], 10);
+  if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    return -1;
+  }
+  return hours * 60 + minutes;
+}
+
+/**
+ * แปลงจำนวนนาทีเป็นสตริงเวลา 'HH:mm'
+ * @param {number} totalMinutes เช่น 510
+ * @returns {string} เช่น "08:30"
+ */
+function minutesToTime(totalMinutes) {
+  var hours = Math.floor(totalMinutes / 60);
+  var minutes = totalMinutes % 60;
+  var hh = hours < 10 ? "0" + hours : String(hours);
+  var mm = minutes < 10 ? "0" + minutes : String(minutes);
+  return hh + ":" + mm;
+}
+
+/**
+ * ย่อชื่อ-นามสกุลเพื่อคุ้มครองข้อมูลส่วนบุคคล (PDPA)
+ * ตัวอย่าง: "นายสมชาย ใจดี" -> "สมชาย จ."
+ * @param {string} fullName ชื่อเต็ม
+ * @returns {string} ชื่อที่ย่อแล้ว
+ */
+function maskName(fullName) {
+  if (!fullName || typeof fullName !== "string") {
+    return "ผู้ใช้งาน";
+  }
+  var cleaned = fullName.trim();
+  // ตัดคำนำหน้านามทั่วไปออก
+  var titles = ["นาย", "นางสาว", "นาง", "อาจารย์", "ดร.", "ผศ.", "รศ."];
+  for (var i = 0; i < titles.length; i++) {
+    if (cleaned.indexOf(titles[i]) === 0) {
+      cleaned = cleaned.substring(titles[i].length).trim();
+      break;
+    }
+  }
+
+  var parts = cleaned.split(/\s+/);
+  if (parts.length === 1) {
+    return parts[0];
+  }
+  var firstName = parts[0];
+  var lastName = parts[parts.length - 1];
+  var initial = lastName.charAt(0);
+  return firstName + " " + initial + ".";
+}
+
+/**
+ * ตรวจสอบความถูกต้องของข้อมูลการจองห้องซ้อม (Create Booking Payload)
+ * @param {Object} payload ข้อมูลที่ส่งมาจากหน้าบ้าน
+ * @returns {{isValid: boolean, errors: Array<string>, sanitized: Object}}
+ */
+function validateBookingPayload(payload) {
+  var errors = [];
+  var sanitized = {};
+
+  if (!payload || typeof payload !== "object") {
+    return { isValid: false, errors: ["ข้อมูลคำขอไม่ถูกต้อง"], sanitized: {} };
+  }
+
+  // 1. ตรวจสอบ Honeypot field (_hp หรือ website) หากมีค่าให้ถือเป็นบอท
+  if (payload._hp || payload.website) {
+    return { isValid: false, errors: ["SPAM_DETECTED"], sanitized: {} };
+  }
+
+  // 2. ชื่อ-นามสกุล
+  var fullName = sanitizeInput(payload.full_name);
+  if (!fullName || fullName.length < 3) {
+    errors.push("กรุณาระบุชื่อ-นามสกุลจริงอย่างน้อย 3 ตัวอักษร");
+  } else if (fullName.length > 100) {
+    errors.push("ชื่อ-นามสกุลยาวเกิน 100 ตัวอักษร");
+  }
+  sanitized.full_name = fullName;
+
+  // 3. ชั้นปี
+  var validYears = ["ปี 1", "ปี 2", "ปี 3", "ปี 4", "บุคลากร"];
+  var studentYear = sanitizeInput(payload.student_year);
+  if (validYears.indexOf(studentYear) === -1) {
+    errors.push("ชั้นปีไม่ถูกต้อง กรุณาเลือก: " + validYears.join(", "));
+  }
+  sanitized.student_year = studentYear;
+
+  // 4. สาขาวิชา
+  var major = sanitizeInput(payload.major);
+  if (!major || major.length < 2) {
+    errors.push("กรุณาระบุสาขาวิชา");
+  }
+  sanitized.major = major;
+
+  // 5. รหัสห้อง
+  var roomId = sanitizeInput(payload.room_id);
+  if (!roomId) {
+    errors.push("กรุณาระบุห้องซ้อม");
+  }
+  sanitized.room_id = roomId;
+
+  // 6. วันที่จอง (YYYY-MM-DD)
+  var dateStr = sanitizeInput(payload.booking_date);
+  var dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(dateStr)) {
+    errors.push("รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น YYYY-MM-DD)");
+  }
+  sanitized.booking_date = dateStr;
+
+  // 7. เวลาเริ่ม และ เวลาสิ้นสุด (HH:mm)
+  var startTime = sanitizeInput(payload.start_time);
+  var endTime = sanitizeInput(payload.end_time);
+  var startMins = timeToMinutes(startTime);
+  var endMins = timeToMinutes(endTime);
+
+  if (startMins === -1) {
+    errors.push("รูปแบบเวลาเริ่มต้นไม่ถูกต้อง (ต้องเป็น HH:mm)");
+  }
+  if (endMins === -1) {
+    errors.push("รูปแบบเวลาสิ้นสุดไม่ถูกต้อง (ต้องเป็น HH:mm)");
+  }
+  if (startMins !== -1 && endMins !== -1) {
+    if (startMins >= endMins) {
+      errors.push("เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น");
+    }
+  }
+  sanitized.start_time = startTime;
+  sanitized.end_time = endTime;
+
+  // 8. จำนวนคน (Party Size)
+  var partySize = parseInt(payload.party_size, 10);
+  if (isNaN(partySize) || partySize < 1 || partySize > 50) {
+    errors.push("จำนวนผู้ใช้งานต้องเป็นตัวเลขตั้งแต่ 1 ถึง 50 คน");
+  }
+  sanitized.party_size = partySize;
+
+  // 9. วัตถุประสงค์
+  var purpose = sanitizeInput(payload.purpose);
+  if (!purpose) {
+    errors.push("กรุณาระบุวัตถุประสงค์การใช้งาน");
+  }
+  sanitized.purpose = purpose;
+
+  // 10. ฟิลด์เสริม: เบอร์โทร, อีเมล, อุปกรณ์
+  sanitized.phone = sanitizeInput(payload.phone || "");
+  var email = sanitizeInput(payload.email || "");
+  if (email) {
+    var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      errors.push("รูปแบบอีเมลไม่ถูกต้อง");
+    }
+  }
+  sanitized.email = email;
+  sanitized.equipment = sanitizeInput(payload.equipment || "");
+
+  return {
+    isValid: errors.length === 0,
+    errors: errors,
+    sanitized: sanitized
+  };
+}
