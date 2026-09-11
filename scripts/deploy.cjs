@@ -1,85 +1,54 @@
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 const { execSync } = require('child_process');
 
 const rootDir = path.resolve(__dirname, '..');
+const distDir = path.join(rootDir, 'dist');
 
-function run(cmd) {
-  console.log(`> ${cmd}`);
-  execSync(cmd, { stdio: 'inherit', cwd: rootDir, shell: 'powershell.exe' });
+function run(cmd, cwd = rootDir) {
+  console.log(`> ${cmd} (in ${path.relative(rootDir, cwd) || '.'})`);
+  execSync(cmd, { stdio: 'inherit', cwd, shell: 'powershell.exe' });
 }
 
 async function main() {
-  const distDir = path.join(rootDir, 'dist');
-  const tempDeployDir = path.join(os.tmpdir(), 'wtk-deploy-' + Date.now());
+  // 1. Build
+  console.log('--- Step 1: Building project ---');
+  run('npm run build');
 
-  try {
-    // 1. Build
-    console.log('--- Step 1: Building project ---');
-    run('npm run build');
+  // 2. Ensure 404.html for SPA
+  const indexHtml = path.join(distDir, 'index.html');
+  const notFoundHtml = path.join(distDir, '404.html');
+  fs.copyFileSync(indexHtml, notFoundHtml);
+  console.log('Copied 404.html for GitHub Pages SPA routing.');
 
-    // 2. Ensure 404.html
-    const indexHtml = path.join(distDir, 'index.html');
-    const notFoundHtml = path.join(distDir, '404.html');
-    fs.copyFileSync(indexHtml, notFoundHtml);
-    console.log('Copied 404.html for GitHub Pages SPA routing.');
+  // 3. Get remote URL
+  const remoteUrl = execSync('git remote get-url origin', { cwd: rootDir, encoding: 'utf8' }).trim();
+  console.log(`Deploying to remote: ${remoteUrl}`);
 
-    // 3. Copy dist to temp
-    console.log('--- Step 2: Copying dist to temp folder ---');
-    fs.cpSync(distDir, tempDeployDir, { recursive: true });
-
-    // 4. Switch to gh-pages
-    console.log('--- Step 3: Switching to gh-pages branch ---');
-    try {
-      run('git fetch origin gh-pages');
-    } catch (e) {}
-    run('git checkout gh-pages');
-    try {
-      run('git reset --hard origin/gh-pages');
-    } catch (e) {}
-
-    // 5. Remove existing files in gh-pages except .git and node_modules
-    console.log('--- Step 4: Cleaning gh-pages working directory ---');
-    const items = fs.readdirSync(rootDir);
-    for (const item of items) {
-      if (item === '.git' || item === 'node_modules') continue;
-      const fullPath = path.join(rootDir, item);
-      fs.rmSync(fullPath, { recursive: true, force: true });
-    }
-
-    // 6. Copy from temp to repo root
-    console.log('--- Step 5: Copying built files to gh-pages root ---');
-    fs.cpSync(tempDeployDir, rootDir, { recursive: true });
-
-    // Ensure .gitignore exists on gh-pages branch so node_modules is never added
-    fs.writeFileSync(path.join(rootDir, '.gitignore'), 'node_modules/\n', 'utf8');
-
-    // 7. Commit & Push
-    console.log('--- Step 6: Committing and pushing gh-pages ---');
-    run('git add -A');
-    try {
-      run('git commit -m "deploy: update gh-pages production build"');
-    } catch (e) {
-      console.log('Nothing new to commit on gh-pages');
-    }
-    run('git push origin gh-pages');
-    console.log('Successfully pushed to gh-pages branch!');
-  } finally {
-    // 8. Return to main branch
-    console.log('--- Step 7: Returning to main branch ---');
-    try {
-      run('git checkout main');
-    } catch (e) {
-      console.error('Failed to checkout main:', e);
-    }
-    // Cleanup temp
-    try {
-      if (fs.existsSync(tempDeployDir)) {
-        fs.rmSync(tempDeployDir, { recursive: true, force: true });
-      }
-    } catch (e) {}
+  // 4. Initialize git inside dist and push to gh-pages branch
+  console.log('--- Step 2: Preparing isolated dist repository ---');
+  const distGit = path.join(distDir, '.git');
+  if (fs.existsSync(distGit)) {
+    fs.rmSync(distGit, { recursive: true, force: true });
   }
+
+  run('git init', distDir);
+  run('git config user.name "masterphum07-web"', distDir);
+  run('git config user.email "masterphum07-web@users.noreply.github.com"', distDir);
+  run(`git remote add origin ${remoteUrl}`, distDir);
+  run('git checkout -B gh-pages', distDir);
+  run('git add -A', distDir);
+  run('git commit -m "deploy: update gh-pages production build"', distDir);
+
+  console.log('--- Step 3: Pushing to gh-pages ---');
+  run('git push --force origin gh-pages', distDir);
+
+  // 5. Clean up .git in dist
+  if (fs.existsSync(distGit)) {
+    fs.rmSync(distGit, { recursive: true, force: true });
+  }
+
+  console.log('Successfully deployed to GitHub Pages (gh-pages branch)!');
 }
 
 main().catch((err) => {
