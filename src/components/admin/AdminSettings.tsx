@@ -205,139 +205,43 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
 
   return (
     <form onSubmit={handleSave} className="space-y-6">
-      {/* 1. Operating Hours & Rules */}
+      {/* 1. Majors & Academic Programs Management */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
-          <Clock className="w-4 h-4 text-primary" />
-          <span>เวลาเปิด-ปิด และกติกาการจอง</span>
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <Input
-            label="เวลาทำการ วันจันทร์ - ศุกร์"
-            placeholder="08:00-20:00"
-            value={weekdayHours}
-            onChange={(e) => setWeekdayHours(e.target.value)}
-            helperText="ฟอร์แมต HH:mm-HH:mm"
-            required
-          />
-
-          <Input
-            label="เวลาทำการ วันเสาร์ - อาทิตย์"
-            placeholder="09:00-18:00"
-            value={weekendHours}
-            onChange={(e) => setWeekendHours(e.target.value)}
-            helperText="ฟอร์แมต HH:mm-HH:mm"
-            required
-          />
-
-          <Input
-            label="ระยะเวลาจองสูงสุดต่อครั้ง (ชั่วโมง)"
-            type="number"
-            min={1}
-            max={6}
-            value={maxHours}
-            onChange={(e) => setMaxHours(Number(e.target.value))}
-            required
-          />
-
-          <Input
-            label="เปิดให้จองล่วงหน้าได้สูงสุด (วัน)"
-            type="number"
-            min={1}
-            max={30}
-            value={advanceDays}
-            onChange={(e) => setAdvanceDays(Number(e.target.value))}
-            required
-          />
-
-          <Input
-            label="ระยะเวลาผ่อนผันการเช็คอิน (นาที)"
-            type="number"
-            min={10}
-            max={60}
-            value={gracePeriod}
-            onChange={(e) => setGracePeriod(Number(e.target.value))}
-            helperText="หากเกินเวลานี้หลังเริ่ม ระบบจะตัดเป็น No-Show ทันที"
-            required
-          />
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-              <Sliders className="w-3.5 h-3.5 text-primary" />
-              <span>สถานะการเปิดให้บริการห้องซ้อม</span>
-            </label>
-            <select
-              value={systemStatus}
-              onChange={(e) => setSystemStatus(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white py-2.5 px-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="open">🟢 เปิดให้บริการตามปกติ (Open)</option>
-              <option value="closed">🔴 ปิดบริการชั่วคราว / ปรับปรุง (Closed)</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Announcements & Contact Info */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
-          <Megaphone className="w-4 h-4 text-gold" />
-          <span>ข้อความประกาศและข้อมูลติดต่อ</span>
-        </h3>
-
-        <div className="space-y-3.5 text-xs">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              ข้อความประกาศแถบสีเหลืองด้านบนสุดของเว็บ (Announcement Bar)
-            </label>
-            <textarea
-              rows={2}
-              value={announcement}
-              onChange={(e) => setAnnouncement(e.target.value)}
-              placeholder="ข้อความประกาศสำคัญ..."
-              className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-primary" />
-              <span>ข้อมูลติดต่อชมรมดนตรี (แสดงที่ส่วนท้ายเว็บ)</span>
-            </label>
-            <Input
-              value={contactInfo}
-              onChange={(e) => setContactInfo(e.target.value)}
-              placeholder="ที่ตั้งชมรม, เบอร์โทรศัพท์, เพจ Facebook"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Majors & Academic Programs Management */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-secondary" />
-              <span>จัดการหลักสูตรและสาขาวิชา (Programs & Majors Management)</span>
+              <GraduationCap className="w-5 h-5 text-secondary" />
+              <span>1. จัดการหลักสูตรและสาขาวิชา (Programs & Majors Management)</span>
             </h3>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              กำหนดตัวเลือกหลักสูตรที่ผู้ใช้สามารถเลือกได้ในหน้าต่างการจองห้องซ้อมดนตรี
+              เพิ่ม ลบ แก้ไข รายชื่อหลักสูตร/สาขาวิชาที่แสดงให้ผู้ใช้เลือกในฟอร์มจองห้องซ้อมดนตรี
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleResetMajors}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-secondary py-1 px-2.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 transition-colors self-start sm:self-auto"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
-            <span>รีเซ็ตเป็นค่าเริ่มต้น วทก.</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+            <button
+              type="button"
+              onClick={handleResetMajors}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-secondary py-1.5 px-2.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50 transition-colors"
+              title="รีเซ็ตเป็น 8 หลักสูตรมาตรฐานของ วทก."
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+              <span>รีเซ็ตค่ามาตรฐาน วทก.</span>
+            </button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              loading={isLoading}
+              className="text-xs font-bold px-3.5 py-1.5 shadow-sm"
+            >
+              <Save className="w-3.5 h-3.5 mr-1" />
+              บันทึกการตั้งค่า
+            </Button>
+          </div>
         </div>
 
         {/* Add new major form */}
-        <div className="flex items-center gap-2 pt-1">
+        <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/70 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <input
             type="text"
             placeholder="พิมพ์ชื่อหลักสูตร หรือ สาขาวิชาใหม่ เช่น หลักสูตรทันตสาธารณสุข..."
@@ -360,12 +264,12 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
             className="text-xs font-semibold px-4 py-2.5 flex-shrink-0"
           >
             <Plus className="w-3.5 h-3.5 mr-1" />
-            เพิ่มหลักสูตร
+            + เพิ่มหลักสูตร
           </Button>
         </div>
 
         {/* List of current majors */}
-        <div className="space-y-2 pt-2">
+        <div className="space-y-2 pt-1">
           {majors.map((majorItem, index) => {
             const isEditing = editingIndex === index;
 
@@ -375,7 +279,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                 className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white transition-all text-xs"
               >
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <span className="w-6 h-6 rounded-lg bg-slate-200/80 text-slate-600 font-bold text-[11px] flex items-center justify-center flex-shrink-0">
+                  <span className="w-6 h-6 rounded-lg bg-blue-100 text-primary font-bold text-[11px] flex items-center justify-center flex-shrink-0">
                     {index + 1}
                   </span>
 
@@ -449,7 +353,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                       type="button"
                       onClick={() => handleStartEdit(index)}
                       className="p-1.5 rounded-lg text-slate-500 hover:text-primary hover:bg-blue-50 transition-colors"
-                      title="แก้ไขชื่อ"
+                      title="แก้ไขชื่อหลักสูตร"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                     </button>
@@ -458,7 +362,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                     <button
                       type="button"
                       onClick={() => handleDeleteMajor(index)}
-                      className="p-1.5 rounded-lg text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors"
                       title="ลบหลักสูตร"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -472,7 +376,116 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
 
         <div className="text-[11px] text-slate-400 pt-1 flex items-center justify-between">
           <span>รวมทั้งหมด {majors.length} หลักสูตร / สาขาวิชา</span>
-          <span className="text-amber-700 font-medium">* อย่าลืมกดปุ่ม "บันทึกการตั้งค่าระบบ" ด้านล่าง</span>
+          <span className="text-amber-700 font-medium">* เมื่อแก้ไขเสร็จแล้วอย่าลืมกดปุ่ม "บันทึกการตั้งค่า"</span>
+        </div>
+      </div>
+
+      {/* 2. Operating Hours & Rules */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
+          <Clock className="w-4 h-4 text-primary" />
+          <span>2. เวลาเปิด-ปิด และกติกาการจอง</span>
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <Input
+            label="เวลาทำการ วันจันทร์ - ศุกร์"
+            placeholder="08:00-20:00"
+            value={weekdayHours}
+            onChange={(e) => setWeekdayHours(e.target.value)}
+            helperText="ฟอร์แมต HH:mm-HH:mm"
+            required
+          />
+
+          <Input
+            label="เวลาทำการ วันเสาร์ - อาทิตย์"
+            placeholder="09:00-18:00"
+            value={weekendHours}
+            onChange={(e) => setWeekendHours(e.target.value)}
+            helperText="ฟอร์แมต HH:mm-HH:mm"
+            required
+          />
+
+          <Input
+            label="ระยะเวลาจองสูงสุดต่อครั้ง (ชั่วโมง)"
+            type="number"
+            min={1}
+            max={6}
+            value={maxHours}
+            onChange={(e) => setMaxHours(Number(e.target.value))}
+            required
+          />
+
+          <Input
+            label="เปิดให้จองล่วงหน้าได้สูงสุด (วัน)"
+            type="number"
+            min={1}
+            max={30}
+            value={advanceDays}
+            onChange={(e) => setAdvanceDays(Number(e.target.value))}
+            required
+          />
+
+          <Input
+            label="ระยะเวลาผ่อนผันการเช็คอิน (นาที)"
+            type="number"
+            min={10}
+            max={60}
+            value={gracePeriod}
+            onChange={(e) => setGracePeriod(Number(e.target.value))}
+            helperText="หากเกินเวลานี้หลังเริ่ม ระบบจะตัดเป็น No-Show ทันที"
+            required
+          />
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+              <Sliders className="w-3.5 h-3.5 text-primary" />
+              <span>สถานะการเปิดให้บริการห้องซ้อม</span>
+            </label>
+            <select
+              value={systemStatus}
+              onChange={(e) => setSystemStatus(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 bg-white py-2.5 px-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="open">🟢 เปิดให้บริการตามปกติ (Open)</option>
+              <option value="closed">🔴 ปิดบริการชั่วคราว / ปรับปรุง (Closed)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Announcements & Contact Info */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
+          <Megaphone className="w-4 h-4 text-gold" />
+          <span>3. ข้อความประกาศและข้อมูลติดต่อ</span>
+        </h3>
+
+        <div className="space-y-3.5 text-xs">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              ข้อความประกาศแถบสีเหลืองด้านบนสุดของเว็บ (Announcement Bar)
+            </label>
+            <textarea
+              rows={2}
+              value={announcement}
+              onChange={(e) => setAnnouncement(e.target.value)}
+              placeholder="ข้อความประกาศสำคัญ..."
+              className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+              <Phone className="w-3.5 h-3.5 text-primary" />
+              <span>ข้อมูลติดต่อชมรมดนตรี (แสดงที่ส่วนท้ายเว็บ)</span>
+            </label>
+            <Input
+              value={contactInfo}
+              onChange={(e) => setContactInfo(e.target.value)}
+              placeholder="ที่ตั้งชมรม, เบอร์โทรศัพท์, เพจ Facebook"
+            />
+          </div>
         </div>
       </div>
 
