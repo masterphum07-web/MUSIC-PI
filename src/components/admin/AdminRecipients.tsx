@@ -36,8 +36,8 @@ export const AdminRecipients: React.FC<AdminRecipientsProps> = ({ token }) => {
   const [newEmail, setNewEmail] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
   const [notifyBooking, setNotifyBooking] = useState(true);
-  const [notifyCancel, setNotifyCancel] = useState(true);
-  const [notifySummary, setNotifySummary] = useState(true);
+  const [notifyCancel, setNotifyCancel] = useState(false);
+  const [notifySummary, setNotifySummary] = useState(false);
 
   // Test email state
   const [isSendingTest, setIsSendingTest] = useState(false);
@@ -212,7 +212,7 @@ export const AdminRecipients: React.FC<AdminRecipientsProps> = ({ token }) => {
               <tr>
                 <th className="py-3 px-4">ชื่อผู้รับ</th>
                 <th className="py-3 px-4">อีเมล (Email)</th>
-                <th className="py-3 px-4 text-center">แจ้งเตือนเมื่อจอง</th>
+                <th className="py-3 px-4 text-center">ขออนุมัติรหัสห้อง</th>
                 <th className="py-3 px-4 text-center">แจ้งเตือนเมื่อยกเลิก</th>
                 <th className="py-3 px-4 text-center">สรุปรายวัน 20:30 น.</th>
                 <th className="py-3 px-4 text-center">สถานะ</th>
