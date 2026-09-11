@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { adminUpdateSettings } from '@/lib/api';
+import React, { useState, useEffect } from 'react';
+import { adminGetSettings, adminUpdateSettings } from '@/lib/api';
 import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';
 import { useToast } from '@/components/common/Toast';
@@ -18,6 +18,7 @@ import {
   ArrowUp,
   ArrowDown,
   RotateCcw,
+  Loader2,
 } from 'lucide-react';
 import { DEFAULT_WTK_MAJORS } from '@/types';
 
@@ -33,6 +34,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   onSettingsSaved,
 }) => {
   const toast = useToast();
+  const [isFetching, setIsFetching] = useState(true);
+
   const [weekdayHours, setWeekdayHours] = useState(
     initialSettings?.operating_hours_weekday || '08:00-20:00'
   );
@@ -82,6 +85,50 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // โหลดการตั้งค่าล่าสุดจาก Google Sheets (Settings) ทันทีที่เปิดหน้า
+  useEffect(() => {
+    let isMounted = true;
+    async function loadSettings() {
+      setIsFetching(true);
+      try {
+        const data = await adminGetSettings(token);
+        if (!isMounted || !data) return;
+
+        if (data.operating_hours_weekday) setWeekdayHours(data.operating_hours_weekday);
+        if (data.operating_hours_weekend) setWeekendHours(data.operating_hours_weekend);
+        if (data.max_booking_hours !== undefined) setMaxHours(Number(data.max_booking_hours));
+        if (data.advance_booking_days !== undefined) setAdvanceDays(Number(data.advance_booking_days));
+        if (data.grace_period_minutes !== undefined) setGracePeriod(Number(data.grace_period_minutes));
+        if (data.announcement_text !== undefined) setAnnouncement(data.announcement_text);
+        if (data.system_status) setSystemStatus(data.system_status);
+        if (data.contact_info !== undefined) setContactInfo(data.contact_info);
+
+        if (data.majors_list) {
+          try {
+            const parsed = typeof data.majors_list === 'string' ? JSON.parse(data.majors_list) : data.majors_list;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setMajors(parsed);
+            }
+          } catch {
+            const parts = String(data.majors_list).split(',').map((s: string) => s.trim()).filter(Boolean);
+            if (parts.length > 0) setMajors(parts);
+          }
+        } else if (Array.isArray(data.majors) && data.majors.length > 0) {
+          setMajors(data.majors);
+        }
+      } catch (err: any) {
+        toast.error('โหลดการตั้งค่าไม่สำเร็จ', err.message || 'ไม่สามารถดึงข้อมูลจากระบบได้');
+      } finally {
+        if (isMounted) setIsFetching(false);
+      }
+    }
+
+    loadSettings();
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
 
   // ฟังก์ชันเพิ่มหลักสูตรใหม่
   const handleAddMajor = () => {
@@ -202,6 +249,16 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
       setIsLoading(false);
     }
   };
+
+  if (isFetching) {
+    return (
+      <div className="bg-white p-12 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col items-center justify-center text-center space-y-3 min-h-[350px]">
+        <Loader2 className="w-9 h-9 text-secondary animate-spin" />
+        <h3 className="text-sm font-semibold text-slate-700">กำลังโหลดการตั้งค่าระบบและรายการหลักสูตร...</h3>
+        <p className="text-xs text-slate-400">ดึงข้อมูลล่าสุดจากฐานข้อมูล Google Sheets</p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSave} className="space-y-6">

@@ -256,6 +256,11 @@ function doPost(e) {
         resultData = adminCrudAdmins(payload.operation, payload.data, superAdmin);
         break;
 
+      case "adminGetSettings":
+        var adminGetSet = requireAuth(token, "staff");
+        resultData = adminGetSettings(adminGetSet);
+        break;
+
       case "adminUpdateSettings":
         var admin5 = requireAuth(token, "staff");
         resultData = adminUpdateSettings(payload.settings, admin5);

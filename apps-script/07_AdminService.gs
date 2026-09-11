@@ -636,6 +636,13 @@ function adminCrudAdmins(operation, data, adminUser) {
 }
 
 /**
+ * ดึงค่าคอนฟิกทั้งหมดของระบบ (Settings)
+ */
+function adminGetSettings(adminUser) {
+  return getSettingsMap();
+}
+
+/**
  * อัปเดตค่าคอนฟิกของระบบ (Settings)
  */
 function adminUpdateSettings(settingsObj, adminUser) {

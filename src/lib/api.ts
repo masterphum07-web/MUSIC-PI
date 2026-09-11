@@ -363,6 +363,13 @@ export async function adminCrudAdmins(
   });
 }
 
+export async function adminGetSettings(token: string): Promise<Record<string, any>> {
+  return callApi<Record<string, any>>({
+    action: 'adminGetSettings',
+    token,
+  });
+}
+
 export async function adminUpdateSettings(
   token: string,
   settings: Record<string, any>

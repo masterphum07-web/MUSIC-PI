@@ -1,7 +1,7 @@
 /**
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
  * BUNDLED CODE.GS - รวมทุกโมดูลสำหรับ Google Apps Script
- * อัปเดตล่าสุด: 2026-09-11T07:48:43.031Z
+ * อัปเดตล่าสุด: 2026-09-11T08:43:31.154Z
  */
 
 /* ============================================================================== */
@@ -1004,6 +1004,11 @@ function doPost(e) {
       case "adminCrudAdmins":
         var superAdmin = requireAuth(token, "super_admin");
         resultData = adminCrudAdmins(payload.operation, payload.data, superAdmin);
+        break;
+
+      case "adminGetSettings":
+        var adminGetSet = requireAuth(token, "staff");
+        resultData = adminGetSettings(adminGetSet);
         break;
 
       case "adminUpdateSettings":
@@ -3238,6 +3243,13 @@ function adminCrudAdmins(operation, data, adminUser) {
   }
 
   throw new Error("Invalid admin operation");
+}
+
+/**
+ * ดึงค่าคอนฟิกทั้งหมดของระบบ (Settings)
+ */
+function adminGetSettings(adminUser) {
+  return getSettingsMap();
 }
 
 /**
