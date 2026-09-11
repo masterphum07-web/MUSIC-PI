@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
 import { Booking } from '@/types';
-import { Copy, Check, Calendar, AlertTriangle, Sparkles, LogIn } from 'lucide-react';
+import { Copy, Check, Calendar, AlertTriangle, Sparkles, LogIn, Mail, Send } from 'lucide-react';
 import { formatThaiDate } from '@/lib/utils';
+import { resendBookingConfirmation } from '@/lib/api';
+import { useToast } from '@/components/common/Toast';
 import dayjs from 'dayjs';
 
 export interface BookingSuccessModalProps {
@@ -19,7 +21,12 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
   booking,
   onOpenCheckIn,
 }) => {
+  const toast = useToast();
   const [copied, setCopied] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [customEmail, setCustomEmail] = useState('');
+  const [showEmailInput, setShowEmailInput] = useState(false);
 
   if (!booking) return null;
 
@@ -27,6 +34,26 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
     navigator.clipboard.writeText(booking.booking_code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleResendEmail = async () => {
+    const target = customEmail.trim() || booking.email;
+    if (!target) {
+      setShowEmailInput(true);
+      return;
+    }
+
+    setIsResending(true);
+    try {
+      await resendBookingConfirmation(booking.booking_code, target);
+      setResendSuccess(true);
+      toast.success('ส่งอีเมลยืนยันสำเร็จ!', `ส่งรายละเอียดคิวไปที่ ${target} แล้ว`);
+      setTimeout(() => setResendSuccess(false), 4000);
+    } catch (err: any) {
+      toast.error('ไม่สามารถส่งอีเมลได้', err.message || 'กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setIsResending(false);
+    }
   };
 
   // ลิงก์ตรงสำหรับเช็คอินทันที (1-Tap Deep Link)
@@ -143,6 +170,98 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
                 หรือสามารถแคปภาพหน้าจอนี้เก็บไว้ใช้ยืนยันกับผู้ดูแลได้เลยครับ
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Email Notification & Resend Card */}
+        <div className="bg-sky-50/70 rounded-2xl border border-sky-200 p-4 text-left space-y-3 shadow-sm">
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-sky-100 flex items-center justify-center text-secondary flex-shrink-0 mt-0.5">
+              <Mail className="w-4 h-4" />
+            </div>
+            <div className="flex-1 text-xs">
+              <div className="font-bold text-primary flex items-center gap-1.5">
+                <span>จัดส่งอีเมลยืนยัน & รหัสห้องเรียบร้อย</span>
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              </div>
+              <div className="text-slate-600 mt-1">
+                {booking.email ? (
+                  <>
+                    ส่งไปยัง: <span className="font-bold text-primary font-mono">{booking.email}</span>
+                  </>
+                ) : (
+                  <span className="text-amber-700">คิวนี้ยังไม่ได้ระบุอีเมล คุณสามารถกรอกอีเมลด้านล่างเพื่อรับรหัสและลิงก์ได้ครับ</span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                💡 <em>หากไม่พบในกล่องข้อความหลัก กรุณาตรวจสอบในโฟลเดอร์ <strong>จดหมายขยะ (Spam / Junk)</strong> หรือ <strong>โปรโมชัน (Promotions)</strong></em>
+              </p>
+            </div>
+          </div>
+
+          {/* Resend actions */}
+          <div className="pt-2 border-t border-sky-100 flex flex-wrap items-center gap-2">
+            {!showEmailInput ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (booking.email) {
+                    handleResendEmail();
+                  } else {
+                    setShowEmailInput(true);
+                  }
+                }}
+                disabled={isResending}
+                className="text-xs bg-white text-secondary border-sky-300 hover:bg-sky-50 font-semibold"
+              >
+                <Send className="w-3.5 h-3.5 mr-1" />
+                {isResending ? 'กำลังส่งเมล...' : (booking.email ? 'กดส่งอีเมลยืนยันซ้ำ' : 'ใส่อีเมลเพื่อรับรหัส')}
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2 w-full">
+                <input
+                  type="email"
+                  placeholder="ระบุอีเมล เช่น student@gmail.com"
+                  value={customEmail}
+                  onChange={(e) => setCustomEmail(e.target.value)}
+                  className="text-xs px-3 py-1.5 rounded-xl border border-sky-300 bg-white flex-1 focus:outline-none focus:ring-1 focus:ring-secondary font-mono"
+                />
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleResendEmail}
+                  disabled={isResending || !customEmail.trim()}
+                  className="text-xs font-bold"
+                >
+                  <Send className="w-3.5 h-3.5 mr-1" />
+                  {isResending ? 'ส่ง...' : 'ส่ง'}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setShowEmailInput(false)}
+                  className="text-xs text-slate-400 hover:text-slate-600 px-1"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            )}
+
+            {booking.email && !showEmailInput && (
+              <button
+                type="button"
+                onClick={() => setShowEmailInput(true)}
+                className="text-[11px] text-slate-500 hover:text-primary underline"
+              >
+                เปลี่ยนอีเมลรับรหัส
+              </button>
+            )}
+
+            {resendSuccess && (
+              <span className="text-xs font-bold text-emerald-600 flex items-center gap-1 animate-fadeIn">
+                <Check className="w-3.5 h-3.5" /> ส่งอีเมลสำเร็จแล้ว!
+              </span>
+            )}
           </div>
         </div>
 

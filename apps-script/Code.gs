@@ -1,6 +1,13 @@
 /**
- * FILE: 00_Setup.gs
+ * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
+ * BUNDLED CODE.GS - รวมทุกโมดูลสำหรับ Google Apps Script
+ * อัปเดตล่าสุด: 2026-09-11T00:24:10.952Z
  */
+
+/* ============================================================================== */
+/* ไฟล์: 00_Setup.gs */
+/* ============================================================================== */
+
 /**
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
@@ -346,9 +353,10 @@ function computeSHA256(input) {
 }
 
 
-/**
- * FILE: 01_Repository.gs
- */
+/* ============================================================================== */
+/* ไฟล์: 01_Repository.gs */
+/* ============================================================================== */
+
 /**
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
@@ -724,9 +732,10 @@ function updateSetting(key, value) {
 }
 
 
-/**
- * FILE: 02_Router.gs
- */
+/* ============================================================================== */
+/* ไฟล์: 02_Router.gs */
+/* ============================================================================== */
+
 /**
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
@@ -852,6 +861,11 @@ function doPost(e) {
         resultData = cancelBooking(payload.booking_code, payload.full_name, payload.reason, context);
         break;
 
+      case "resendBookingConfirmation":
+        actor = payload.full_name || "public";
+        resultData = resendBookingConfirmation(payload.booking_code, payload.email);
+        break;
+
       case "adminLogin":
         actor = payload.username || "admin_login";
         resultData = adminLogin(payload.username, payload.password, context);
@@ -956,9 +970,10 @@ function createJsonResponse(data) {
 }
 
 
-/**
- * FILE: 03_Validation.gs
- */
+/* ============================================================================== */
+/* ไฟล์: 03_Validation.gs */
+/* ============================================================================== */
+
 /**
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
@@ -1200,9 +1215,10 @@ function validateBookingPayload(payload) {
 }
 
 
-/**
- * FILE: 04_BookingService.gs
- */
+/* ============================================================================== */
+/* ไฟล์: 04_BookingService.gs */
+/* ============================================================================== */
+
 /**
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
@@ -1572,12 +1588,27 @@ function createBooking(rawPayload, context) {
     Logger.log("writeLog error: " + logErr.message);
   }
 
-  // ส่งอีเมลแจ้งเตือนภายนอก LockService (Non-blocking) เพื่อให้ตอบกลับไคลเอนต์ได้ทันที
+  // ส่งอีเมลแจ้งเตือนภายนอก LockService (Non-blocking)
+  // 1. ส่งอีเมลยืนยันการจองให้ผู้จองก่อนเป็นลำดับแรกสุดเสมอ (Priority #1)
+  if (createdBooking.email) {
+    try {
+      sendBookingConfirmationToUser(createdBooking);
+    } catch (userMailErr) {
+      Logger.log("ไม่สามารถส่งเมลยืนยันถึงผู้จอง: " + userMailErr.message);
+      try {
+        writeLog("system", "Mailer", "USER_MAIL_ERROR", "MAIL", createdBooking.booking_code, userMailErr.message);
+      } catch (logErr1) {}
+    }
+  }
+
+  // 2. ส่งอีเมลแจ้งเตือนผู้ดูแลระบบ (แยก try-catch เด็ดขาด ป้องกันไม่ให้กระทบเมลผู้จอง)
   try {
     sendNewBookingNotificationToAdmins(createdBooking);
-    sendBookingConfirmationToUser(createdBooking);
-  } catch (mailErr) {
-    Logger.log("ไม่สามารถส่งเมลแจ้งเตือนจองใหม่ได้: " + mailErr.message);
+  } catch (adminMailErr) {
+    Logger.log("ไม่สามารถส่งเมลแจ้งเตือนแอดมิน: " + adminMailErr.message);
+    try {
+      writeLog("system", "Mailer", "ADMIN_MAIL_ERROR", "MAIL", createdBooking.booking_code, adminMailErr.message);
+    } catch (logErr2) {}
   }
 
   return {
@@ -1932,10 +1963,52 @@ function cancelBooking(bookingCode, fullName, cancelReason, context) {
   };
 }
 
-
 /**
- * FILE: 05_Logger.gs
+ * ส่งอีเมลยืนยันการจองซ้ำ (Resend Booking Confirmation)
+ * @param {string} bookingCode รหัสการจอง เช่น 'MB-2609-XXXX'
+ * @param {string} newEmail อีเมลใหม่ที่ต้องการส่ง (หากไม่ระบุจะใช้อีเมลเดิมในคิว)
  */
+function resendBookingConfirmation(bookingCode, newEmail) {
+  if (!bookingCode) {
+    throw new Error("กรุณาระบุรหัสการจอง");
+  }
+  var booking = findRowById("Bookings", "booking_code", String(bookingCode).trim());
+  if (!booking) {
+    throw new Error("ไม่พบรายการจองรหัสนี้ในระบบ กรุณาตรวจสอบรหัสการจอง");
+  }
+
+  var targetEmail = (newEmail && String(newEmail).trim()) ? String(newEmail).trim() : String(booking.email || "").trim();
+  if (!targetEmail) {
+    throw new Error("คิวนี้ยังไม่มีข้อมูลอีเมล กรุณาระบุอีเมลที่ต้องการให้จัดส่ง");
+  }
+
+  // อัปเดตอีเมลในระบบหากผู้ใช้ระบุอีเมลใหม่
+  if (newEmail && String(newEmail).trim() && String(newEmail).trim() !== String(booking.email || "").trim()) {
+    updateRow("Bookings", "booking_code", booking.booking_code, {
+      email: String(newEmail).trim(),
+      updated_at: new Date(),
+      updated_by: "user_resend"
+    });
+    booking.email = String(newEmail).trim();
+  }
+
+  sendBookingConfirmationToUser(booking);
+  try {
+    writeLog("public", booking.full_name, "RESEND_CONFIRMATION_EMAIL", "BOOKING", booking.booking_code, { sent_to: targetEmail });
+  } catch (e) {}
+
+  return {
+    success: true,
+    message: "ระบบได้จัดส่งอีเมลยืนยันการจองไปยัง " + targetEmail + " เรียบร้อยแล้ว",
+    sent_to: targetEmail
+  };
+}
+
+
+/* ============================================================================== */
+/* ไฟล์: 05_Logger.gs */
+/* ============================================================================== */
+
 /**
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
@@ -1989,9 +2062,10 @@ function writeLog(actorType, actorName, action, targetType, targetId, detail, us
 }
 
 
-/**
- * FILE: 06_Auth.gs
- */
+/* ============================================================================== */
+/* ไฟล์: 06_Auth.gs */
+/* ============================================================================== */
+
 /**
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
@@ -2273,9 +2347,10 @@ function requireAuth(token, minRole) {
 }
 
 
-/**
- * FILE: 07_AdminService.gs
- */
+/* ============================================================================== */
+/* ไฟล์: 07_AdminService.gs */
+/* ============================================================================== */
+
 /**
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
@@ -2929,9 +3004,10 @@ function adminSendTestEmail(targetEmail, adminUser) {
 }
 
 
-/**
- * FILE: 08_Mailer.gs
- */
+/* ============================================================================== */
+/* ไฟล์: 08_Mailer.gs */
+/* ============================================================================== */
+
 /**
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
@@ -2988,20 +3064,54 @@ function safeSendEmail(options) {
 
     if (options.to) {
       mailOptions.to = options.to;
+    } else if (options.bcc) {
+      // หากส่งเฉพาะ BCC ต้องระบุ to เป็นอีเมลระบบ/ผู้ส่ง เพื่อป้องกันไม่ให้ MailApp โยน Exception "Invalid argument: to"
+      try {
+        mailOptions.to = Session.getEffectiveUser().getEmail() || "noreply@wtk.ac.th";
+      } catch (toErr) {
+        mailOptions.to = "noreply@wtk.ac.th";
+      }
     }
+
     if (options.bcc && options.bcc.length > 0) {
       mailOptions.bcc = Array.isArray(options.bcc) ? options.bcc.join(",") : options.bcc;
     }
 
-    // หากไม่มีทั้ง to และ bcc ให้ข้าม
-    if (!mailOptions.to && !mailOptions.bcc) {
+    // หากไม่มี to ให้ข้าม
+    if (!mailOptions.to) {
       return false;
     }
 
+    // Plain text alternative ป้องกัน Spam Filter และรองรับไคลเอนต์ที่ไม่แสดงผล HTML
+    if (options.body) {
+      mailOptions.body = options.body;
+    } else if (options.htmlBody) {
+      mailOptions.body = options.htmlBody.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                                         .replace(/<[^>]+>/g, ' ')
+                                         .replace(/\s+/g, ' ')
+                                         .trim();
+    } else {
+      mailOptions.body = options.subject;
+    }
+
+    try {
+      var senderEmail = Session.getEffectiveUser().getEmail();
+      if (senderEmail) {
+        mailOptions.replyTo = senderEmail;
+      }
+    } catch (replyErr) {}
+
     MailApp.sendEmail(mailOptions);
+    try {
+      var recipientLog = mailOptions.to + (mailOptions.bcc ? " [BCC: " + mailOptions.bcc + "]" : "");
+      writeLog("system", "Mailer", "SEND_EMAIL_SUCCESS", "MAIL", recipientLog, options.subject);
+    } catch (logErr) {}
     return true;
   } catch (err) {
-    writeLog("system", "Mailer", "SEND_EMAIL_FAILED", "MAIL", options.subject, err.message);
+    Logger.log("safeSendEmail Error: " + err.message);
+    try {
+      writeLog("system", "Mailer", "SEND_EMAIL_FAILED", "MAIL", options.subject, err.message);
+    } catch (logErr2) {}
     return false;
   }
 }
@@ -3126,11 +3236,25 @@ function sendBookingConfirmationToUser(booking) {
       '<strong>⚠️ กฎระเบียบสำคัญ:</strong> กรุณากดเช็คอินหน้าเว็บตั้งแต่ก่อนเริ่มเวลา 15 นาที จนถึงไม่เกิน 30 นาทีหลังเวลาเริ่ม หากไม่เช็คอินภายในเวลา ระบบจะตัดสิทธิ์ No-show และปล่อยห้องให้ผู้อื่นทันที' +
     '</div>';
 
+  var dateStr = formatDateToString(booking.booking_date);
+  var plainText = "ใบยืนยันการจองห้องซ้อมดนตรี ชมรมดนตรี วทก.\n\n" +
+    "สวัสดีคุณ " + booking.full_name + "\n" +
+    "รหัสการจองและรหัสผ่านเข้าห้อง: " + booking.booking_code + "\n" +
+    "ห้องซ้อม: " + booking.room_id + "\n" +
+    "วันที่ใช้งาน: " + dateStr + "\n" +
+    "เวลา: " + booking.start_time + " - " + booking.end_time + " น.\n\n" +
+    "ลิงก์ดำเนินการด่วน (1-Tap Actions):\n" +
+    "1. กดยืนยันเช็คอิน: " + checkInUrl + "\n" +
+    "2. กดยืนยันคืนห้อง: " + checkOutUrl + "\n" +
+    "3. ขอยกเลิกการจอง: " + cancelUrl + "\n\n" +
+    "* ข้อควรปฏิบัติ: กรุณากดเช็คอินหน้าเว็บตั้งแต่ก่อนเริ่มเวลา 15 นาที จนถึงไม่เกิน 30 นาทีหลังเวลาเริ่ม";
+
   var html = buildBaseEmailTemplate("ใบยืนยันการจองห้องซ้อมดนตรี วทก.", "ยืนยันการจอง", "#1B7A8C", content);
   safeSendEmail({
     to: userEmail,
     subject: "ใบยืนยันการจองห้องซ้อมดนตรี วทก. [รหัส: " + booking.booking_code + "]",
-    htmlBody: html
+    htmlBody: html,
+    body: plainText
   });
 }
 
@@ -3320,9 +3444,10 @@ function sendDailySummaryNotification(summary) {
 }
 
 
-/**
- * FILE: 09_Triggers.gs
- */
+/* ============================================================================== */
+/* ไฟล์: 09_Triggers.gs */
+/* ============================================================================== */
+
 /**
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
@@ -3557,9 +3682,10 @@ function removeTriggers() {
 }
 
 
-/**
- * FILE: 99_Test.gs
- */
+/* ============================================================================== */
+/* ไฟล์: 99_Test.gs */
+/* ============================================================================== */
+
 /**
  * ==============================================================================
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
@@ -3833,3 +3959,5 @@ function runAllUnitTests() {
     status: failedTests === 0 ? "SUCCESS" : "FAILURE"
   };
 }
+
+

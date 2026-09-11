@@ -367,12 +367,27 @@ function createBooking(rawPayload, context) {
     Logger.log("writeLog error: " + logErr.message);
   }
 
-  // ส่งอีเมลแจ้งเตือนภายนอก LockService (Non-blocking) เพื่อให้ตอบกลับไคลเอนต์ได้ทันที
+  // ส่งอีเมลแจ้งเตือนภายนอก LockService (Non-blocking)
+  // 1. ส่งอีเมลยืนยันการจองให้ผู้จองก่อนเป็นลำดับแรกสุดเสมอ (Priority #1)
+  if (createdBooking.email) {
+    try {
+      sendBookingConfirmationToUser(createdBooking);
+    } catch (userMailErr) {
+      Logger.log("ไม่สามารถส่งเมลยืนยันถึงผู้จอง: " + userMailErr.message);
+      try {
+        writeLog("system", "Mailer", "USER_MAIL_ERROR", "MAIL", createdBooking.booking_code, userMailErr.message);
+      } catch (logErr1) {}
+    }
+  }
+
+  // 2. ส่งอีเมลแจ้งเตือนผู้ดูแลระบบ (แยก try-catch เด็ดขาด ป้องกันไม่ให้กระทบเมลผู้จอง)
   try {
     sendNewBookingNotificationToAdmins(createdBooking);
-    sendBookingConfirmationToUser(createdBooking);
-  } catch (mailErr) {
-    Logger.log("ไม่สามารถส่งเมลแจ้งเตือนจองใหม่ได้: " + mailErr.message);
+  } catch (adminMailErr) {
+    Logger.log("ไม่สามารถส่งเมลแจ้งเตือนแอดมิน: " + adminMailErr.message);
+    try {
+      writeLog("system", "Mailer", "ADMIN_MAIL_ERROR", "MAIL", createdBooking.booking_code, adminMailErr.message);
+    } catch (logErr2) {}
   }
 
   return {
@@ -724,5 +739,46 @@ function cancelBooking(bookingCode, fullName, cancelReason, context) {
     success: true,
     message: "ยกเลิกการจองและคืนห้องซ้อมว่างให้ผู้อื่นเรียบร้อยแล้ว",
     booking: updated
+  };
+}
+
+/**
+ * ส่งอีเมลยืนยันการจองซ้ำ (Resend Booking Confirmation)
+ * @param {string} bookingCode รหัสการจอง เช่น 'MB-2609-XXXX'
+ * @param {string} newEmail อีเมลใหม่ที่ต้องการส่ง (หากไม่ระบุจะใช้อีเมลเดิมในคิว)
+ */
+function resendBookingConfirmation(bookingCode, newEmail) {
+  if (!bookingCode) {
+    throw new Error("กรุณาระบุรหัสการจอง");
+  }
+  var booking = findRowById("Bookings", "booking_code", String(bookingCode).trim());
+  if (!booking) {
+    throw new Error("ไม่พบรายการจองรหัสนี้ในระบบ กรุณาตรวจสอบรหัสการจอง");
+  }
+
+  var targetEmail = (newEmail && String(newEmail).trim()) ? String(newEmail).trim() : String(booking.email || "").trim();
+  if (!targetEmail) {
+    throw new Error("คิวนี้ยังไม่มีข้อมูลอีเมล กรุณาระบุอีเมลที่ต้องการให้จัดส่ง");
+  }
+
+  // อัปเดตอีเมลในระบบหากผู้ใช้ระบุอีเมลใหม่
+  if (newEmail && String(newEmail).trim() && String(newEmail).trim() !== String(booking.email || "").trim()) {
+    updateRow("Bookings", "booking_code", booking.booking_code, {
+      email: String(newEmail).trim(),
+      updated_at: new Date(),
+      updated_by: "user_resend"
+    });
+    booking.email = String(newEmail).trim();
+  }
+
+  sendBookingConfirmationToUser(booking);
+  try {
+    writeLog("public", booking.full_name, "RESEND_CONFIRMATION_EMAIL", "BOOKING", booking.booking_code, { sent_to: targetEmail });
+  } catch (e) {}
+
+  return {
+    success: true,
+    message: "ระบบได้จัดส่งอีเมลยืนยันการจองไปยัง " + targetEmail + " เรียบร้อยแล้ว",
+    sent_to: targetEmail
   };
 }

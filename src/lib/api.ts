@@ -197,6 +197,19 @@ export async function cancelBooking(
   );
 }
 
+export async function resendBookingConfirmation(
+  bookingCode: string,
+  email?: string
+): Promise<{ success: boolean; message: string; sent_to: string }> {
+  return callApi<{ success: boolean; message: string; sent_to: string }>(
+    {
+      action: 'resendBookingConfirmation',
+      payload: { booking_code: bookingCode, email: email || '' },
+    },
+    0
+  );
+}
+
 // ==========================================
 // 2. ADMIN AUTH API
 // ==========================================

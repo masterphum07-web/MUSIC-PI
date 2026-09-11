@@ -54,20 +54,54 @@ function safeSendEmail(options) {
 
     if (options.to) {
       mailOptions.to = options.to;
+    } else if (options.bcc) {
+      // หากส่งเฉพาะ BCC ต้องระบุ to เป็นอีเมลระบบ/ผู้ส่ง เพื่อป้องกันไม่ให้ MailApp โยน Exception "Invalid argument: to"
+      try {
+        mailOptions.to = Session.getEffectiveUser().getEmail() || "noreply@wtk.ac.th";
+      } catch (toErr) {
+        mailOptions.to = "noreply@wtk.ac.th";
+      }
     }
+
     if (options.bcc && options.bcc.length > 0) {
       mailOptions.bcc = Array.isArray(options.bcc) ? options.bcc.join(",") : options.bcc;
     }
 
-    // หากไม่มีทั้ง to และ bcc ให้ข้าม
-    if (!mailOptions.to && !mailOptions.bcc) {
+    // หากไม่มี to ให้ข้าม
+    if (!mailOptions.to) {
       return false;
     }
 
+    // Plain text alternative ป้องกัน Spam Filter และรองรับไคลเอนต์ที่ไม่แสดงผล HTML
+    if (options.body) {
+      mailOptions.body = options.body;
+    } else if (options.htmlBody) {
+      mailOptions.body = options.htmlBody.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                                         .replace(/<[^>]+>/g, ' ')
+                                         .replace(/\s+/g, ' ')
+                                         .trim();
+    } else {
+      mailOptions.body = options.subject;
+    }
+
+    try {
+      var senderEmail = Session.getEffectiveUser().getEmail();
+      if (senderEmail) {
+        mailOptions.replyTo = senderEmail;
+      }
+    } catch (replyErr) {}
+
     MailApp.sendEmail(mailOptions);
+    try {
+      var recipientLog = mailOptions.to + (mailOptions.bcc ? " [BCC: " + mailOptions.bcc + "]" : "");
+      writeLog("system", "Mailer", "SEND_EMAIL_SUCCESS", "MAIL", recipientLog, options.subject);
+    } catch (logErr) {}
     return true;
   } catch (err) {
-    writeLog("system", "Mailer", "SEND_EMAIL_FAILED", "MAIL", options.subject, err.message);
+    Logger.log("safeSendEmail Error: " + err.message);
+    try {
+      writeLog("system", "Mailer", "SEND_EMAIL_FAILED", "MAIL", options.subject, err.message);
+    } catch (logErr2) {}
     return false;
   }
 }
@@ -192,11 +226,25 @@ function sendBookingConfirmationToUser(booking) {
       '<strong>⚠️ กฎระเบียบสำคัญ:</strong> กรุณากดเช็คอินหน้าเว็บตั้งแต่ก่อนเริ่มเวลา 15 นาที จนถึงไม่เกิน 30 นาทีหลังเวลาเริ่ม หากไม่เช็คอินภายในเวลา ระบบจะตัดสิทธิ์ No-show และปล่อยห้องให้ผู้อื่นทันที' +
     '</div>';
 
+  var dateStr = formatDateToString(booking.booking_date);
+  var plainText = "ใบยืนยันการจองห้องซ้อมดนตรี ชมรมดนตรี วทก.\n\n" +
+    "สวัสดีคุณ " + booking.full_name + "\n" +
+    "รหัสการจองและรหัสผ่านเข้าห้อง: " + booking.booking_code + "\n" +
+    "ห้องซ้อม: " + booking.room_id + "\n" +
+    "วันที่ใช้งาน: " + dateStr + "\n" +
+    "เวลา: " + booking.start_time + " - " + booking.end_time + " น.\n\n" +
+    "ลิงก์ดำเนินการด่วน (1-Tap Actions):\n" +
+    "1. กดยืนยันเช็คอิน: " + checkInUrl + "\n" +
+    "2. กดยืนยันคืนห้อง: " + checkOutUrl + "\n" +
+    "3. ขอยกเลิกการจอง: " + cancelUrl + "\n\n" +
+    "* ข้อควรปฏิบัติ: กรุณากดเช็คอินหน้าเว็บตั้งแต่ก่อนเริ่มเวลา 15 นาที จนถึงไม่เกิน 30 นาทีหลังเวลาเริ่ม";
+
   var html = buildBaseEmailTemplate("ใบยืนยันการจองห้องซ้อมดนตรี วทก.", "ยืนยันการจอง", "#1B7A8C", content);
   safeSendEmail({
     to: userEmail,
     subject: "ใบยืนยันการจองห้องซ้อมดนตรี วทก. [รหัส: " + booking.booking_code + "]",
-    htmlBody: html
+    htmlBody: html,
+    body: plainText
   });
 }
 

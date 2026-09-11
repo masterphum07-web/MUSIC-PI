@@ -123,6 +123,11 @@ function doPost(e) {
         resultData = cancelBooking(payload.booking_code, payload.full_name, payload.reason, context);
         break;
 
+      case "resendBookingConfirmation":
+        actor = payload.full_name || "public";
+        resultData = resendBookingConfirmation(payload.booking_code, payload.email);
+        break;
+
       case "adminLogin":
         actor = payload.username || "admin_login";
         resultData = adminLogin(payload.username, payload.password, context);
