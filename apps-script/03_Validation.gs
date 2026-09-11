@@ -65,9 +65,7 @@ function timeToMinutes(timeVal) {
 function formatTimeToHHmm(timeVal) {
   if (!timeVal) return "";
   if (timeVal instanceof Date) {
-    var h = ("0" + timeVal.getHours()).slice(-2);
-    var m = ("0" + timeVal.getMinutes()).slice(-2);
-    return h + ":" + m;
+    return Utilities.formatDate(timeVal, "Asia/Bangkok", "HH:mm");
   }
   var s = String(timeVal).trim();
   if (s.indexOf(":") !== -1) {

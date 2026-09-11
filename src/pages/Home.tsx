@@ -147,18 +147,44 @@ export const Home: React.FC<HomeProps> = ({
     loadData(selectedDate);
   }, [selectedDate, loadData]);
 
-  // รีเฟรชเมื่อมีการแจ้งเตือนจากภายนอก เช่น จองสำเร็จ หรือ เช็คอิน/เช็คเอาต์ (ขึ้นตรงกับ refreshTrigger เท่านั้น ไม่ผูกกับ selectedDate)
+  // รีเฟรชเมื่อมีการแจ้งเตือนจากภายนอก เช่น จองสำเร็จ หรือ เช็คอิน/เช็คเอาต์ หรือ อนุมัติคิว
   useEffect(() => {
     if (refreshTrigger && refreshTrigger > 0) {
+      try {
+        localStorage.removeItem(`wtk_cached_public_state_${selectedDateRef.current}`);
+        localStorage.removeItem('wtk_cached_public_state_latest');
+      } catch {}
       loadData(selectedDateRef.current, true);
     }
   }, [refreshTrigger, loadData]);
 
-  // ระบบ Auto-refresh ทุก 60 วินาที
+  // เมื่อผู้ใช้สลับหน้าจอหรือเปิดแท็บกลับมา (เช่น กลับมาจากแอปอีเมลหลังกดอนุมัติ) ให้โหลดข้อมูลสดทันที
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        try {
+          localStorage.removeItem(`wtk_cached_public_state_${selectedDateRef.current}`);
+        } catch {}
+        loadData(selectedDateRef.current, true);
+      }
+    };
+    const handleFocus = () => {
+      loadData(selectedDateRef.current, true);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [loadData]);
+
+  // ระบบ Auto-refresh ทุก 15 วินาที เพื่อให้ตารางหน้าเว็บเป็นปัจจุบันตลอดเวลา
   useEffect(() => {
     const interval = setInterval(() => {
       loadData(selectedDateRef.current, false);
-    }, 60000);
+    }, 15000);
     return () => clearInterval(interval);
   }, [loadData]);
 

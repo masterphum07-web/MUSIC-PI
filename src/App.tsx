@@ -269,6 +269,7 @@ function AppContent() {
           onClose={handleCloseDirectApproval}
           params={directApprovalParams}
           onGoToAdmin={handleDirectApprovalGoToAdmin}
+          onApproved={() => setRefreshTrigger((prev) => prev + 1)}
         />
       )}
 

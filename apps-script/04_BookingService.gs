@@ -100,7 +100,7 @@ function isOverlapping(roomId, dateStr, startTime, endTime, excludeBookingId) {
 function formatDateToString(val) {
   if (!val) return "";
   if (val instanceof Date) {
-    return Utilities.formatDate(val, Session.getScriptTimeZone() || "GMT+7", "yyyy-MM-dd");
+    return Utilities.formatDate(val, "Asia/Bangkok", "yyyy-MM-dd");
   }
   var str = String(val).trim();
   if (str.length >= 10) {

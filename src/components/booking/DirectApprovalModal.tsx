@@ -16,6 +16,7 @@ export interface DirectApprovalModalProps {
     reason?: string;
   };
   onGoToAdmin: () => void;
+  onApproved?: () => void;
 }
 
 export const DirectApprovalModal: React.FC<DirectApprovalModalProps> = ({
@@ -23,6 +24,7 @@ export const DirectApprovalModal: React.FC<DirectApprovalModalProps> = ({
   onClose,
   params,
   onGoToAdmin,
+  onApproved,
 }) => {
   const [status, setStatus] = useState<'loading' | 'success' | 'already_processed' | 'rejected' | 'error'>('loading');
   const [message, setMessage] = useState<string>('');
@@ -45,6 +47,13 @@ export const DirectApprovalModal: React.FC<DirectApprovalModalProps> = ({
           } else {
             setStatus('success');
           }
+          try {
+            if (res.booking?.booking_date) {
+              localStorage.removeItem(`wtk_cached_public_state_${res.booking.booking_date}`);
+            }
+            localStorage.removeItem('wtk_cached_public_state_latest');
+          } catch {}
+          if (onApproved) onApproved();
         } else {
           const res = await directRejectBooking(params.id, params.token, params.reason);
           if (!isMounted) return;
@@ -55,6 +64,13 @@ export const DirectApprovalModal: React.FC<DirectApprovalModalProps> = ({
           } else {
             setStatus('rejected');
           }
+          try {
+            if (res.booking?.booking_date) {
+              localStorage.removeItem(`wtk_cached_public_state_${res.booking.booking_date}`);
+            }
+            localStorage.removeItem('wtk_cached_public_state_latest');
+          } catch {}
+          if (onApproved) onApproved();
         }
       } catch (err: any) {
         if (!isMounted) return;

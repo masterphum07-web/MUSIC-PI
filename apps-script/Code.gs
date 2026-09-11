@@ -1,7 +1,7 @@
 /**
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
  * BUNDLED CODE.GS - รวมทุกโมดูลสำหรับ Google Apps Script
- * อัปเดตล่าสุด: 2026-09-11T08:49:44.392Z
+ * อัปเดตล่าสุด: 2026-09-11T08:54:27.823Z
  */
 
 /* ============================================================================== */
@@ -1152,9 +1152,7 @@ function timeToMinutes(timeVal) {
 function formatTimeToHHmm(timeVal) {
   if (!timeVal) return "";
   if (timeVal instanceof Date) {
-    var h = ("0" + timeVal.getHours()).slice(-2);
-    var m = ("0" + timeVal.getMinutes()).slice(-2);
-    return h + ":" + m;
+    return Utilities.formatDate(timeVal, "Asia/Bangkok", "HH:mm");
   }
   var s = String(timeVal).trim();
   if (s.indexOf(":") !== -1) {
@@ -1432,7 +1430,7 @@ function isOverlapping(roomId, dateStr, startTime, endTime, excludeBookingId) {
 function formatDateToString(val) {
   if (!val) return "";
   if (val instanceof Date) {
-    return Utilities.formatDate(val, Session.getScriptTimeZone() || "GMT+7", "yyyy-MM-dd");
+    return Utilities.formatDate(val, "Asia/Bangkok", "yyyy-MM-dd");
   }
   var str = String(val).trim();
   if (str.length >= 10) {

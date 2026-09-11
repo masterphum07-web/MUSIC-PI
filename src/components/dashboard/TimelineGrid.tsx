@@ -169,9 +169,14 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({
             {/* Rows: One per Room */}
             <div className="space-y-3">
               {rooms.map((room) => {
-                const roomBookings = bookings.filter(
-                  (b) => b.room_id === room.room_id && b.status !== 'cancelled'
-                );
+                const roomBookings = bookings.filter((b) => {
+                  if (b.status === 'cancelled') return false;
+                  if (rooms.length <= 1) return true;
+                  return (
+                    String(b.room_id || '').trim().toLowerCase() ===
+                    String(room.room_id || '').trim().toLowerCase()
+                  );
+                });
 
                 return (
                   <div
@@ -256,17 +261,23 @@ export const TimelineGrid: React.FC<TimelineGridProps> = ({
                               b.status === 'checked_in'
                                 ? 'bg-emerald-600 text-white border-emerald-700'
                                 : b.status === 'overdue'
-                                ? 'bg-amber-500 text-white border-amber-600'
+                                ? 'bg-rose-600 text-white border-rose-700'
+                                : b.status === 'pending_approval'
+                                ? 'bg-amber-600 text-white border-amber-700 ring-2 ring-amber-400/70 shadow-amber-200'
                                 : 'bg-primary text-white border-primary-dark'
                             }`}
                           >
                             <div className="flex items-center justify-between gap-1 leading-none">
                               <span className="text-[11px] font-bold truncate">
-                                {b.full_name}
+                                {b.status === 'pending_approval' ? `⏳ ${b.full_name} (รออนุมัติ)` : b.full_name}
                               </span>
                               <span
                                 className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                                  b.status === 'checked_in' ? 'bg-white animate-pulse' : 'bg-gold'
+                                  b.status === 'checked_in'
+                                    ? 'bg-white animate-pulse'
+                                    : b.status === 'pending_approval'
+                                    ? 'bg-amber-200 animate-ping'
+                                    : 'bg-gold'
                                 }`}
                               />
                             </div>
