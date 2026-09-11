@@ -107,7 +107,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             <div>
               <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
                 <span>ยินดีต้อนรับ,</span>
-                <span className="text-gold underline decoration-gold/40 decoration-wavy underline-offset-4">
+                <span className="text-gold">
                   {adminUser?.display_name || 'ผู้ดูแลระบบ'}
                 </span>
                 <span className="text-xl">👋</span>

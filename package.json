@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "bundle:gas": "node scripts/bundle-gas.cjs"
+    "bundle:gas": "node scripts/bundle-gas.cjs",
+    "deploy": "node scripts/deploy.cjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

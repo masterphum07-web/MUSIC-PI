@@ -178,10 +178,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
               {/* Admin User Info & Logout */}
               <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                <div className="hidden md:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl text-xs border border-white/15">
+                <div className="hidden md:flex items-center gap-2 text-xs">
                   <ShieldCheck className="w-4 h-4 text-gold" />
                   <div>
-                    <span className="font-semibold block leading-tight">
+                    <span className="font-semibold block leading-tight text-white">
                       {adminUser?.display_name || 'ผู้ดูแลระบบ'}
                     </span>
                     <span className="text-[10px] text-blue-200">
@@ -232,12 +232,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         {/* Main Admin Content */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           {/* Top Refresh Control */}
-          <div className="flex items-center justify-between text-xs text-slate-500">
-            <span className="font-medium">
-              เข้าสู่ระบบในชื่อ: <strong>{adminUser?.display_name}</strong> ({adminUser?.role || 'admin'})
-            </span>
-
-            {activeTab === 'overview' && (
+          {activeTab === 'overview' && (
+            <div className="flex items-center justify-end text-xs text-slate-500">
               <button
                 onClick={() => loadDashboard(true)}
                 disabled={isRefreshing || isLoading}
@@ -246,8 +242,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
                 <span>รีเฟรชสถิติ</span>
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Tab 1: Overview */}
           {activeTab === 'overview' && (
