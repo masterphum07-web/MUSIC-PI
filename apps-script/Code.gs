@@ -1,7 +1,7 @@
 /**
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
  * BUNDLED CODE.GS - รวมทุกโมดูลสำหรับ Google Apps Script
- * อัปเดตล่าสุด: 2026-09-11T00:24:10.952Z
+ * อัปเดตล่าสุด: 2026-09-11T01:46:25.624Z
  */
 
 /* ============================================================================== */
@@ -311,7 +311,17 @@ function seedInitialData(ss) {
     ["privacy_mode", "true", "โหมดย่อชื่อผู้จองหน้าแรก (true/false) เพื่อความเป็นส่วนตัว"],
     ["system_status", "open", "สถานะระบบ (open / maintenance)"],
     ["announcement_text", "ยินดีต้อนรับสู่ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก. กรุณาเช็คอินภายใน 30 นาทีหลังเริ่มเวลา", "ข้อความประกาศข่าวด่วนหน้าแรก (เว้นว่างได้)"],
-    ["contact_info", "ชมรมดนตรี วทก. อาคารกิจกรรมนักศึกษา ชั้น 2 โทร: 02-xxx-xxxx", "ข้อมูลการติดต่อและระเบียบการใช้งาน"]
+    ["contact_info", "ชมรมดนตรี วทก. อาคารกิจกรรมนักศึกษา ชั้น 2 โทร: 02-xxx-xxxx", "ข้อมูลการติดต่อและระเบียบการใช้งาน"],
+    ["majors_list", JSON.stringify([
+      "หลักสูตรการแพทย์แผนไทยบัณฑิต",
+      "หลักสูตรวิทยาศาสตรบัณฑิต สาขาวิชารังสีเทคนิค",
+      "หลักสูตรวิทยาศาสตรบัณฑิต สาขาวิชาเทคโนโลยีหัวใจและทรวงอก",
+      "หลักสูตรสาธารณสุขศาสตรบัณฑิต สาขาวิชาทันตสาธารณสุข",
+      "หลักสูตรสาธารณสุขศาสตรบัณฑิต สาขาวิชาสาธารณสุขชุมชน",
+      "หลักสูตรวิทยาศาสตรบัณฑิต สาขาวิชาเวชระเบียน",
+      "อาจารย์ / เจ้าหน้าที่ / บุคลากรวิทยาลัย",
+      "อื่นๆ / บุคคลภายนอก"
+    ]), "รายการหลักสูตรและสาขาวิชาในระบบ (JSON Array)"]
   ];
   settingsSheet.getRange(2, 1, defaultSettings.length, defaultSettings[0].length).setValues(defaultSettings);
 
@@ -1700,7 +1710,31 @@ function getPublicState(targetDate) {
     }
   }
 
-  // 4. ข้อมูลการตั้งค่าที่อนุญาตให้ Public ทราบ
+  // 4. รายชื่อหลักสูตรและสาขาวิชา (ดึงจาก Settings หรือใช้ค่าเริ่มต้นมาตรฐาน วทก.)
+  var defaultMajors = [
+    "หลักสูตรการแพทย์แผนไทยบัณฑิต",
+    "หลักสูตรวิทยาศาสตรบัณฑิต สาขาวิชารังสีเทคนิค",
+    "หลักสูตรวิทยาศาสตรบัณฑิต สาขาวิชาเทคโนโลยีหัวใจและทรวงอก",
+    "หลักสูตรสาธารณสุขศาสตรบัณฑิต สาขาวิชาทันตสาธารณสุข",
+    "หลักสูตรสาธารณสุขศาสตรบัณฑิต สาขาวิชาสาธารณสุขชุมชน",
+    "หลักสูตรวิทยาศาสตรบัณฑิต สาขาวิชาเวชระเบียน",
+    "อาจารย์ / เจ้าหน้าที่ / บุคลากรวิทยาลัย",
+    "อื่นๆ / บุคคลภายนอก"
+  ];
+  var activeMajors = defaultMajors;
+  if (settings.majors_list) {
+    try {
+      var parsed = JSON.parse(settings.majors_list);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        activeMajors = parsed;
+      }
+    } catch (e) {
+      var splitArr = String(settings.majors_list).split(",").map(function(s) { return s.trim(); }).filter(Boolean);
+      if (splitArr.length > 0) activeMajors = splitArr;
+    }
+  }
+
+  // 5. ข้อมูลการตั้งค่าที่อนุญาตให้ Public ทราบ
   var publicSettings = {
     operating_hours_weekday: settings.operating_hours_weekday || "08:00-20:00",
     operating_hours_weekend: settings.operating_hours_weekend || "09:00-18:00",
@@ -1711,7 +1745,8 @@ function getPublicState(targetDate) {
     privacy_mode: isPrivacy,
     system_status: settings.system_status || "open",
     announcement_text: settings.announcement_text || "",
-    contact_info: settings.contact_info || ""
+    contact_info: settings.contact_info || "",
+    majors: activeMajors
   };
 
   return {

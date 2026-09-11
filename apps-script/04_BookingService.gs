@@ -479,7 +479,31 @@ function getPublicState(targetDate) {
     }
   }
 
-  // 4. ข้อมูลการตั้งค่าที่อนุญาตให้ Public ทราบ
+  // 4. รายชื่อหลักสูตรและสาขาวิชา (ดึงจาก Settings หรือใช้ค่าเริ่มต้นมาตรฐาน วทก.)
+  var defaultMajors = [
+    "หลักสูตรการแพทย์แผนไทยบัณฑิต",
+    "หลักสูตรวิทยาศาสตรบัณฑิต สาขาวิชารังสีเทคนิค",
+    "หลักสูตรวิทยาศาสตรบัณฑิต สาขาวิชาเทคโนโลยีหัวใจและทรวงอก",
+    "หลักสูตรสาธารณสุขศาสตรบัณฑิต สาขาวิชาทันตสาธารณสุข",
+    "หลักสูตรสาธารณสุขศาสตรบัณฑิต สาขาวิชาสาธารณสุขชุมชน",
+    "หลักสูตรวิทยาศาสตรบัณฑิต สาขาวิชาเวชระเบียน",
+    "อาจารย์ / เจ้าหน้าที่ / บุคลากรวิทยาลัย",
+    "อื่นๆ / บุคคลภายนอก"
+  ];
+  var activeMajors = defaultMajors;
+  if (settings.majors_list) {
+    try {
+      var parsed = JSON.parse(settings.majors_list);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        activeMajors = parsed;
+      }
+    } catch (e) {
+      var splitArr = String(settings.majors_list).split(",").map(function(s) { return s.trim(); }).filter(Boolean);
+      if (splitArr.length > 0) activeMajors = splitArr;
+    }
+  }
+
+  // 5. ข้อมูลการตั้งค่าที่อนุญาตให้ Public ทราบ
   var publicSettings = {
     operating_hours_weekday: settings.operating_hours_weekday || "08:00-20:00",
     operating_hours_weekend: settings.operating_hours_weekend || "09:00-18:00",
@@ -490,7 +514,8 @@ function getPublicState(targetDate) {
     privacy_mode: isPrivacy,
     system_status: settings.system_status || "open",
     announcement_text: settings.announcement_text || "",
-    contact_info: settings.contact_info || ""
+    contact_info: settings.contact_info || "",
+    majors: activeMajors
   };
 
   return {

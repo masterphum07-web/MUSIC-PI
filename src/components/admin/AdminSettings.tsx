@@ -9,7 +9,17 @@ import {
   Clock,
   Megaphone,
   Phone,
+  GraduationCap,
+  Plus,
+  Trash2,
+  Edit3,
+  Check,
+  X,
+  ArrowUp,
+  ArrowDown,
+  RotateCcw,
 } from 'lucide-react';
+import { DEFAULT_WTK_MAJORS } from '@/types';
 
 export interface AdminSettingsProps {
   token: string;
@@ -49,7 +59,124 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     initialSettings?.contact_info ||
       'ชมรมดนตรี วทก. อาคารกิจกรรมนักศึกษา ชั้น 2 โทร: 02-xxx-xxxx'
   );
+
+  // รายการหลักสูตร / สาขาวิชา
+  const [majors, setMajors] = useState<string[]>(() => {
+    if (initialSettings?.majors_list) {
+      try {
+        const parsed = JSON.parse(initialSettings.majors_list);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+      if (typeof initialSettings.majors_list === 'string') {
+        const parts = initialSettings.majors_list.split(',').map((s: string) => s.trim()).filter(Boolean);
+        if (parts.length > 0) return parts;
+      }
+    }
+    if (Array.isArray(initialSettings?.majors) && initialSettings.majors.length > 0) {
+      return initialSettings.majors;
+    }
+    return DEFAULT_WTK_MAJORS;
+  });
+
+  const [newMajorName, setNewMajorName] = useState('');
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingValue, setEditingValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // ฟังก์ชันเพิ่มหลักสูตรใหม่
+  const handleAddMajor = () => {
+    const trimmed = newMajorName.trim();
+    if (!trimmed) {
+      toast.error('กรุณาระบุชื่อหลักสูตร', 'ไม่สามารถเพิ่มค่าว่างได้');
+      return;
+    }
+    if (majors.some((m) => m.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error('หลักสูตรซ้ำ', 'มีหลักสูตรหรือสาขาวิชานี้อยู่ในรายการแล้ว');
+      return;
+    }
+    setMajors((prev) => [...prev, trimmed]);
+    setNewMajorName('');
+    toast.success('เพิ่มหลักสูตรเรียบร้อย', `เพิ่ม "${trimmed}" เข้าสู่ระบบแล้ว (อย่าลืมกดบันทึกการตั้งค่า)`);
+  };
+
+  // เริ่มแก้ไข
+  const handleStartEdit = (index: number) => {
+    setEditingIndex(index);
+    setEditingValue(majors[index] || '');
+  };
+
+  // บันทึกการแก้ไขเฉพาะแถว
+  const handleSaveEdit = (index: number) => {
+    const trimmed = editingValue.trim();
+    if (!trimmed) {
+      toast.error('ชื่อหลักสูตรไม่ถูกต้อง', 'ไม่สามารถเว้นว่างได้');
+      return;
+    }
+    if (majors.some((m, idx) => idx !== index && m.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error('ชื่อหลักสูตรซ้ำ', 'มีหลักสูตรชื่อนี้อยู่ในรายการแล้ว');
+      return;
+    }
+    setMajors((prev) => {
+      const updated = [...prev];
+      updated[index] = trimmed;
+      return updated;
+    });
+    setEditingIndex(null);
+    setEditingValue('');
+    toast.success('แก้ไขหลักสูตรแล้ว', `เปลี่ยนชื่อเป็น "${trimmed}" เรียบร้อย`);
+  };
+
+  // ลบหลักสูตร
+  const handleDeleteMajor = (index: number) => {
+    const target = majors[index];
+    if (majors.length <= 1) {
+      toast.error('ไม่สามารถลบได้', 'ต้องมีหลักสูตรในระบบอย่างน้อย 1 รายการ');
+      return;
+    }
+    const confirmed = window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบหลักสูตร "${target}" ออกจากระบบ?`);
+    if (!confirmed) return;
+
+    setMajors((prev) => prev.filter((_, idx) => idx !== index));
+    if (editingIndex === index) {
+      setEditingIndex(null);
+      setEditingValue('');
+    }
+    toast.success('ลบหลักสูตรสำเร็จ', `นำ "${target}" ออกจากรายการแล้ว`);
+  };
+
+  // เลื่อนลำดับขึ้น
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return;
+    setMajors((prev) => {
+      const updated = [...prev];
+      const temp = updated[index - 1];
+      updated[index - 1] = updated[index];
+      updated[index] = temp;
+      return updated;
+    });
+  };
+
+  // เลื่อนลำดับลง
+  const handleMoveDown = (index: number) => {
+    if (index >= majors.length - 1) return;
+    setMajors((prev) => {
+      const updated = [...prev];
+      const temp = updated[index + 1];
+      updated[index + 1] = updated[index];
+      updated[index] = temp;
+      return updated;
+    });
+  };
+
+  // รีเซ็ตเป็นค่าเริ่มต้น วทก.
+  const handleResetMajors = () => {
+    const confirmed = window.confirm('ต้องการรีเซ็ตรายชื่อหลักสูตรกลับเป็นค่าเริ่มต้นมาตรฐานของ วทก. ใช่หรือไม่?');
+    if (!confirmed) return;
+    setMajors([...DEFAULT_WTK_MAJORS]);
+    setEditingIndex(null);
+    setEditingValue('');
+    toast.success('รีเซ็ตสำเร็จ', 'คืนค่าหลักสูตรมาตรฐานของ วทก. เรียบร้อย (อย่าลืมกดบันทึก)');
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,9 +191,10 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
         announcement_text: announcement,
         system_status: systemStatus,
         contact_info: contactInfo,
+        majors_list: JSON.stringify(majors),
       });
 
-      toast.success('บันทึกการตั้งค่าสำเร็จ', 'ระบบได้อัปเดตการตั้งค่าส่วนกลางเรียบร้อย');
+      toast.success('บันทึกการตั้งค่าสำเร็จ', 'ระบบได้อัปเดตการตั้งค่าส่วนกลางและหลักสูตรเรียบร้อย');
       if (onSettingsSaved) onSettingsSaved();
     } catch (err: any) {
       toast.error('บันทึกไม่สำเร็จ', err.message);
@@ -183,6 +311,168 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               placeholder="ที่ตั้งชมรม, เบอร์โทรศัพท์, เพจ Facebook"
             />
           </div>
+        </div>
+      </div>
+
+      {/* 3. Majors & Academic Programs Management */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <GraduationCap className="w-4 h-4 text-secondary" />
+              <span>จัดการหลักสูตรและสาขาวิชา (Programs & Majors Management)</span>
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              กำหนดตัวเลือกหลักสูตรที่ผู้ใช้สามารถเลือกได้ในหน้าต่างการจองห้องซ้อมดนตรี
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleResetMajors}
+            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-secondary py-1 px-2.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 transition-colors self-start sm:self-auto"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+            <span>รีเซ็ตเป็นค่าเริ่มต้น วทก.</span>
+          </button>
+        </div>
+
+        {/* Add new major form */}
+        <div className="flex items-center gap-2 pt-1">
+          <input
+            type="text"
+            placeholder="พิมพ์ชื่อหลักสูตร หรือ สาขาวิชาใหม่ เช่น หลักสูตรทันตสาธารณสุข..."
+            value={newMajorName}
+            onChange={(e) => setNewMajorName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddMajor();
+              }
+            }}
+            className="text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white flex-1 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-slate-400"
+          />
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={handleAddMajor}
+            disabled={!newMajorName.trim()}
+            className="text-xs font-semibold px-4 py-2.5 flex-shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5 mr-1" />
+            เพิ่มหลักสูตร
+          </Button>
+        </div>
+
+        {/* List of current majors */}
+        <div className="space-y-2 pt-2">
+          {majors.map((majorItem, index) => {
+            const isEditing = editingIndex === index;
+
+            return (
+              <div
+                key={index}
+                className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white transition-all text-xs"
+              >
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <span className="w-6 h-6 rounded-lg bg-slate-200/80 text-slate-600 font-bold text-[11px] flex items-center justify-center flex-shrink-0">
+                    {index + 1}
+                  </span>
+
+                  {isEditing ? (
+                    <div className="flex items-center gap-1.5 flex-1 mr-2">
+                      <input
+                        type="text"
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSaveEdit(index);
+                          } else if (e.key === 'Escape') {
+                            setEditingIndex(null);
+                          }
+                        }}
+                        autoFocus
+                        className="text-xs px-2.5 py-1.5 rounded-lg border border-primary bg-white flex-1 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEdit(index)}
+                        className="p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                        title="บันทึกชื่อนี้"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingIndex(null)}
+                        className="p-1.5 rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors"
+                        title="ยกเลิก"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="font-medium text-slate-800 truncate" title={majorItem}>
+                      {majorItem}
+                    </span>
+                  )}
+                </div>
+
+                {!isEditing && (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Move Up */}
+                    <button
+                      type="button"
+                      onClick={() => handleMoveUp(index)}
+                      disabled={index === 0}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-100 disabled:opacity-25 transition-colors"
+                      title="เลื่อนขึ้น"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Move Down */}
+                    <button
+                      type="button"
+                      onClick={() => handleMoveDown(index)}
+                      disabled={index === majors.length - 1}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-slate-100 disabled:opacity-25 transition-colors"
+                      title="เลื่อนลง"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Edit */}
+                    <button
+                      type="button"
+                      onClick={() => handleStartEdit(index)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-primary hover:bg-blue-50 transition-colors"
+                      title="แก้ไขชื่อ"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Delete */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMajor(index)}
+                      className="p-1.5 rounded-lg text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      title="ลบหลักสูตร"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="text-[11px] text-slate-400 pt-1 flex items-center justify-between">
+          <span>รวมทั้งหมด {majors.length} หลักสูตร / สาขาวิชา</span>
+          <span className="text-amber-700 font-medium">* อย่าลืมกดปุ่ม "บันทึกการตั้งค่าระบบ" ด้านล่าง</span>
         </div>
       </div>
 

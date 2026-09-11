@@ -91,8 +91,26 @@ export const Home: React.FC<HomeProps> = ({
     onStateLoadedRef.current = onStateLoaded;
   }, [onStateLoaded]);
 
-  // ฟังก์ชันดึงข้อมูล Public State จาก Backend แบบ Stale-While-Revalidate (Stable callback ป้องกัน infinite loop)
-  const loadData = useCallback(async (date: string, _isManualRefresh = false) => {
+  const selectedDateRef = React.useRef(selectedDate);
+  useEffect(() => {
+    selectedDateRef.current = selectedDate;
+  }, [selectedDate]);
+
+  const isFetchingRef = React.useRef(false);
+  const lastFetchTimeRef = React.useRef(0);
+
+  // ฟังก์ชันดึงข้อมูล Public State จาก Backend แบบ Stale-While-Revalidate (พร้อม Concurrency Lock & Throttling ป้องกัน Infinite Loop 100%)
+  const loadData = useCallback(async (date: string, isManualRefresh = false) => {
+    if (isFetchingRef.current) return;
+
+    const now = Date.now();
+    // หากไม่ใช่การกดปุ่มรีเฟรชเองโดยตรง และเพิ่งโหลดไปไม่ถึง 2.5 วินาที ให้ข้ามเพื่อป้องกันกระพริบซ้ำ
+    if (!isManualRefresh && now - lastFetchTimeRef.current < 2500) {
+      return;
+    }
+
+    isFetchingRef.current = true;
+    lastFetchTimeRef.current = now;
     setIsRefreshing(true);
     setError(null);
 
@@ -111,6 +129,7 @@ export const Home: React.FC<HomeProps> = ({
       setError(err.message || 'ไม่สามารถดึงข้อมูลคิวล่าสุดได้');
     } finally {
       setIsRefreshing(false);
+      isFetchingRef.current = false;
     }
   }, []);
 
@@ -128,20 +147,20 @@ export const Home: React.FC<HomeProps> = ({
     loadData(selectedDate);
   }, [selectedDate, loadData]);
 
-  // รีเฟรชเมื่อมีการแจ้งเตือนจากภายนอก เช่น จองสำเร็จ หรือ เช็คอิน/เช็คเอาต์
+  // รีเฟรชเมื่อมีการแจ้งเตือนจากภายนอก เช่น จองสำเร็จ หรือ เช็คอิน/เช็คเอาต์ (ขึ้นตรงกับ refreshTrigger เท่านั้น ไม่ผูกกับ selectedDate)
   useEffect(() => {
     if (refreshTrigger && refreshTrigger > 0) {
-      loadData(selectedDate, true);
+      loadData(selectedDateRef.current, true);
     }
-  }, [refreshTrigger, selectedDate, loadData]);
+  }, [refreshTrigger, loadData]);
 
   // ระบบ Auto-refresh ทุก 60 วินาที
   useEffect(() => {
     const interval = setInterval(() => {
-      loadData(selectedDate, true);
+      loadData(selectedDateRef.current, false);
     }, 60000);
     return () => clearInterval(interval);
-  }, [selectedDate, loadData]);
+  }, [loadData]);
 
   // คำนวณจำนวนคิวเพื่อแสดงใน DateStrip badge
   const bookingCountsByDate = React.useMemo(() => {

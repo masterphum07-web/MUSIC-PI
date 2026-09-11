@@ -4,7 +4,7 @@ import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';
 import { Select } from '@/components/common/Select';
 import { createBooking } from '@/lib/api';
-import { Booking, Room, PublicSettings } from '@/types';
+import { Booking, Room, PublicSettings, DEFAULT_WTK_MAJORS } from '@/types';
 import { useToast } from '@/components/common/Toast';
 import { formatThaiDate, timeToMinutes, minutesToTime } from '@/lib/utils';
 import {
@@ -50,9 +50,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [startTime, setStartTime] = useState<string>('13:00');
   const [endTime, setEndTime] = useState<string>('15:00');
 
+  // รายชื่อหลักสูตร / สาขาวิชาที่ดึงจากระบบ หรือค่ามาตรฐาน วทก.
+  const availableMajors = (settings?.majors && settings.majors.length > 0)
+    ? settings.majors
+    : DEFAULT_WTK_MAJORS;
+
   const [fullName, setFullName] = useState<string>('');
   const [studentYear, setStudentYear] = useState<string>('ปี 1');
-  const [major, setMajor] = useState<string>('เทคโนโลยีหัวใจและทรวงอก');
+  const [major, setMajor] = useState<string>(() => availableMajors[0] || 'หลักสูตรการแพทย์แผนไทยบัณฑิต');
   const [phone, setPhone] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [partySize, setPartySize] = useState<number>(4);
@@ -74,6 +79,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [submissionPhase, setSubmissionPhase] = useState<string>('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // ซิงก์ค่า major ให้ตรงกับตัวเลือกที่มีอยู่เสมอ
+  useEffect(() => {
+    if (availableMajors.length > 0 && !availableMajors.includes(major)) {
+      setMajor(availableMajors[0]);
+    }
+  }, [availableMajors, major]);
+
   // กำหนดค่าเริ่มต้นตาม prefill เมื่อเปิด Modal
   useEffect(() => {
     if (isOpen) {
@@ -87,17 +99,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }
   }, [isOpen, prefill]);
 
-  // ตัวเลือกสาขาวิชาของ วทก.
-  const majorOptions = [
-    { value: 'เทคโนโลยีหัวใจและทรวงอก', label: 'เทคโนโลยีหัวใจและทรวงอก' },
-    { value: 'รังสีเทคนิค', label: 'รังสีเทคนิค' },
-    { value: 'กายภาพบำบัด', label: 'กายภาพบำบัด' },
-    { value: 'สาธารณสุขศาสตร์', label: 'สาธารณสุขศาสตร์' },
-    { value: 'การแพทย์แผนไทย', label: 'การแพทย์แผนไทย' },
-    { value: 'วิทยาศาสตร์การแพทย์', label: 'วิทยาศาสตร์การแพทย์' },
-    { value: 'เจ้าหน้าที่/บุคลากร', label: 'เจ้าหน้าที่ / บุคลากรวิทยาลัย' },
-    { value: 'อื่นๆ', label: 'อื่นๆ' },
-  ];
+  // ตัวเลือกสาขาวิชาของ วทก. (แบบไดนามิก 100%)
+  const majorOptions = availableMajors.map((item) => ({
+    value: item,
+    label: item,
+  }));
 
   // อุปกรณ์ดนตรีที่มีในห้องซ้อม
   const availableEquipment = [
