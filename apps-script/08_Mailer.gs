@@ -46,10 +46,14 @@ function safeSendEmail(options) {
       return false;
     }
 
+    var settings = getSettingsMap();
+    var clubEmail = (settings.club_email || "").trim();
+    var senderName = (settings.club_sender_name || "ชมรมดนตรี วทก. (ระบบจองห้องซ้อม)").trim();
+
     var mailOptions = {
       subject: options.subject,
       htmlBody: options.htmlBody,
-      name: "ชมรมดนตรี วทก. (ระบบจองห้องซ้อม)"
+      name: senderName
     };
 
     if (options.to) {
@@ -57,9 +61,9 @@ function safeSendEmail(options) {
     } else if (options.bcc) {
       // หากส่งเฉพาะ BCC ต้องระบุ to เป็นอีเมลระบบ/ผู้ส่ง เพื่อป้องกันไม่ให้ MailApp โยน Exception "Invalid argument: to"
       try {
-        mailOptions.to = Session.getEffectiveUser().getEmail() || "noreply@wtk.ac.th";
+        mailOptions.to = clubEmail || Session.getEffectiveUser().getEmail() || "noreply@wtk.ac.th";
       } catch (toErr) {
-        mailOptions.to = "noreply@wtk.ac.th";
+        mailOptions.to = clubEmail || "noreply@wtk.ac.th";
       }
     }
 
@@ -84,12 +88,23 @@ function safeSendEmail(options) {
       mailOptions.body = options.subject;
     }
 
-    try {
-      var senderEmail = Session.getEffectiveUser().getEmail();
-      if (senderEmail) {
-        mailOptions.replyTo = senderEmail;
-      }
-    } catch (replyErr) {}
+    // ตั้งค่า replyTo และตรวจสอบ from alias
+    if (clubEmail) {
+      mailOptions.replyTo = clubEmail;
+      try {
+        var aliases = GmailApp.getAliases();
+        if (aliases && aliases.indexOf(clubEmail) !== -1) {
+          mailOptions.from = clubEmail;
+        }
+      } catch (aliasErr) {}
+    } else {
+      try {
+        var senderEmail = Session.getEffectiveUser().getEmail();
+        if (senderEmail) {
+          mailOptions.replyTo = senderEmail;
+        }
+      } catch (replyErr) {}
+    }
 
     MailApp.sendEmail(mailOptions);
     try {

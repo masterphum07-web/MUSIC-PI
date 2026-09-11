@@ -1,7 +1,7 @@
 /**
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
  * BUNDLED CODE.GS - รวมทุกโมดูลสำหรับ Google Apps Script
- * อัปเดตล่าสุด: 2026-09-11T07:38:46.035Z
+ * อัปเดตล่าสุด: 2026-09-11T07:43:42.643Z
  */
 
 /* ============================================================================== */
@@ -310,6 +310,8 @@ function seedInitialData(ss) {
     ["max_bookings_per_user_day", "2", "จำนวนครั้งสูงสุดที่บุคคลเดียวกันสามารถจองได้ต่อวัน"],
     ["privacy_mode", "true", "โหมดย่อชื่อผู้จองหน้าแรก (true/false) เพื่อความเป็นส่วนตัว"],
     ["system_status", "open", "สถานะระบบ (open / maintenance)"],
+    ["club_email", "music_club@wtk.ac.th", "อีเมลทางการของชมรม (สำหรับ Reply-To และส่งในนาม)"],
+    ["club_sender_name", "ชมรมดนตรี วทก. (ระบบจองห้องซ้อม)", "ชื่อผู้ส่งที่จะแสดงในกล่องจดหมายอีเมล"],
     ["announcement_text", "ยินดีต้อนรับสู่ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก. กรุณาเช็คอินภายใน 30 นาทีหลังเริ่มเวลา", "ข้อความประกาศข่าวด่วนหน้าแรก (เว้นว่างได้)"],
     ["contact_info", "ชมรมดนตรี วทก. อาคารกิจกรรมนักศึกษา ชั้น 2 โทร: 02-xxx-xxxx", "ข้อมูลการติดต่อและระเบียบการใช้งาน"],
     ["majors_list", JSON.stringify([
@@ -3381,10 +3383,14 @@ function safeSendEmail(options) {
       return false;
     }
 
+    var settings = getSettingsMap();
+    var clubEmail = (settings.club_email || "").trim();
+    var senderName = (settings.club_sender_name || "ชมรมดนตรี วทก. (ระบบจองห้องซ้อม)").trim();
+
     var mailOptions = {
       subject: options.subject,
       htmlBody: options.htmlBody,
-      name: "ชมรมดนตรี วทก. (ระบบจองห้องซ้อม)"
+      name: senderName
     };
 
     if (options.to) {
@@ -3392,9 +3398,9 @@ function safeSendEmail(options) {
     } else if (options.bcc) {
       // หากส่งเฉพาะ BCC ต้องระบุ to เป็นอีเมลระบบ/ผู้ส่ง เพื่อป้องกันไม่ให้ MailApp โยน Exception "Invalid argument: to"
       try {
-        mailOptions.to = Session.getEffectiveUser().getEmail() || "noreply@wtk.ac.th";
+        mailOptions.to = clubEmail || Session.getEffectiveUser().getEmail() || "noreply@wtk.ac.th";
       } catch (toErr) {
-        mailOptions.to = "noreply@wtk.ac.th";
+        mailOptions.to = clubEmail || "noreply@wtk.ac.th";
       }
     }
 
@@ -3419,12 +3425,23 @@ function safeSendEmail(options) {
       mailOptions.body = options.subject;
     }
 
-    try {
-      var senderEmail = Session.getEffectiveUser().getEmail();
-      if (senderEmail) {
-        mailOptions.replyTo = senderEmail;
-      }
-    } catch (replyErr) {}
+    // ตั้งค่า replyTo และตรวจสอบ from alias
+    if (clubEmail) {
+      mailOptions.replyTo = clubEmail;
+      try {
+        var aliases = GmailApp.getAliases();
+        if (aliases && aliases.indexOf(clubEmail) !== -1) {
+          mailOptions.from = clubEmail;
+        }
+      } catch (aliasErr) {}
+    } else {
+      try {
+        var senderEmail = Session.getEffectiveUser().getEmail();
+        if (senderEmail) {
+          mailOptions.replyTo = senderEmail;
+        }
+      } catch (replyErr) {}
+    }
 
     MailApp.sendEmail(mailOptions);
     try {
