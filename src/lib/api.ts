@@ -210,6 +210,53 @@ export async function resendBookingConfirmation(
   );
 }
 
+export async function directApproveBooking(
+  id: string,
+  token: string
+): Promise<{
+  success?: boolean;
+  alreadyProcessed?: boolean;
+  message: string;
+  booking?: Booking;
+}> {
+  return callApi<{
+    success?: boolean;
+    alreadyProcessed?: boolean;
+    message: string;
+    booking?: Booking;
+  }>(
+    {
+      action: 'directApproveBooking',
+      payload: { id, token },
+    },
+    0
+  );
+}
+
+export async function directRejectBooking(
+  id: string,
+  token: string,
+  reason?: string
+): Promise<{
+  success?: boolean;
+  alreadyProcessed?: boolean;
+  message: string;
+  booking?: Booking;
+}> {
+  return callApi<{
+    success?: boolean;
+    alreadyProcessed?: boolean;
+    message: string;
+    booking?: Booking;
+  }>(
+    {
+      action: 'directRejectBooking',
+      payload: { id, token, reason },
+    },
+    0
+  );
+}
+
 // ==========================================
 // 2. ADMIN AUTH API
 // ==========================================

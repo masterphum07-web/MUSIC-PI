@@ -212,15 +212,10 @@ function sendNewBookingNotificationToAdmins(booking) {
   if (bccRecipients.length === 0) return;
 
   var token = generateApprovalToken(booking);
-  var gasUrl = "https://script.google.com/macros/s/AKfycbxhyoxEr6_YKysnI272d_O047z2cFXMixyAXrvi_jWTVJkXyXjFSrrVkRZ_G6brt5vY/exec";
-  try {
-    var liveUrl = ScriptApp.getService().getUrl();
-    if (liveUrl) gasUrl = liveUrl;
-  } catch (e) {}
-
-  var approveUrl = gasUrl + "?action=approve_booking&id=" + encodeURIComponent(booking.booking_id) + "&token=" + encodeURIComponent(token);
-  var rejectUrl = gasUrl + "?action=reject_booking&id=" + encodeURIComponent(booking.booking_id) + "&token=" + encodeURIComponent(token);
-  var adminPanelUrl = "https://masterphum07-web.github.io/MUSIC-PI/?admin=true";
+  var webAppBaseUrl = "https://masterphum07-web.github.io/MUSIC-PI/";
+  var approveUrl = webAppBaseUrl + "?action=approve_booking&id=" + encodeURIComponent(booking.booking_id) + "&token=" + encodeURIComponent(token);
+  var rejectUrl = webAppBaseUrl + "?action=reject_booking&id=" + encodeURIComponent(booking.booking_id) + "&token=" + encodeURIComponent(token);
+  var adminPanelUrl = webAppBaseUrl + "?admin=true";
 
   var content = '<h3 style="margin-top: 0; color: #0F3D5C;">มีคำขอจองห้องซ้อมดนตรีใหม่ (รออนุมัติ)</h3>' +
     '<p>มีรายการคำขอจองห้องซ้อมใหม่ กรุณาตรวจสอบและกดอนุมัติหรือปฏิเสธคำขอ:</p>' +

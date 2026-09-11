@@ -1,7 +1,7 @@
 /**
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
  * BUNDLED CODE.GS - รวมทุกโมดูลสำหรับ Google Apps Script
- * อัปเดตล่าสุด: 2026-09-11T08:43:31.154Z
+ * อัปเดตล่าสุด: 2026-09-11T08:49:44.392Z
  */
 
 /* ============================================================================== */
@@ -823,11 +823,14 @@ function renderApprovalHtmlPage(booking, isApproved, message) {
     ? "ระบบได้เปลี่ยนสถานะเป็น <strong>\"จองแล้ว\" (Booked)</strong> และส่งอีเมลยืนยันพร้อม <strong>รหัสผ่านเข้าห้องและ QR Code</strong> ไปยังผู้จองเรียบร้อยแล้ว"
     : (message || "ระบบได้ปฏิเสธคำขอนี้และส่งอีเมลแจ้งเตือนไปยังผู้จองเรียบร้อยแล้ว");
 
+  var targetWebUrl = "https://masterphum07-web.github.io/MUSIC-PI/?admin=true";
+
   var html = '<!DOCTYPE html>' +
   '<html lang="th">' +
   '<head>' +
     '<meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<meta http-equiv="refresh" content="2;url=' + targetWebUrl + '">' +
     '<title>' + title + ' - ชมรมดนตรี วทก.</title>' +
     '<style>' +
       'body { font-family: "Sarabun", Arial, sans-serif; background: #F8FAFC; color: #1E293B; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }' +
@@ -840,6 +843,11 @@ function renderApprovalHtmlPage(booking, isApproved, message) {
       '.details-row:last-child { margin-bottom: 0; }' +
       '.btn { display: inline-block; background: #0F3D5C; color: #FFFFFF; padding: 12px 26px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 13px; box-shadow: 0 2px 6px rgba(15,61,92,0.25); }' +
     '</style>' +
+    '<script>' +
+      'try {' +
+        'window.top.location.href = "' + targetWebUrl + '";' +
+      '} catch(e) {}' +
+    '</script>' +
   '</head>' +
   '<body>' +
     '<div class="card">' +
@@ -854,7 +862,7 @@ function renderApprovalHtmlPage(booking, isApproved, message) {
           '<div class="details-row"><span style="color:#64748B">เวลา:</span><span>' + bTime + '</span></div>' +
         '</div>'
       ) : '') +
-      '<a href="https://masterphum07-web.github.io/MUSIC-PI/?admin=true" class="btn">เปิดระบบจัดการหลังบ้าน (Admin Console)</a>' +
+      '<a href="' + targetWebUrl + '" target="_top" class="btn">เปิดระบบจัดการหลังบ้าน (Admin Console)</a>' +
     '</div>' +
   '</body>' +
   '</html>';
@@ -942,6 +950,16 @@ function doPost(e) {
       case "resendBookingConfirmation":
         actor = payload.full_name || "public";
         resultData = resendBookingConfirmation(payload.booking_code, payload.email);
+        break;
+
+      case "directApproveBooking":
+        actor = "email_token_approval";
+        resultData = approveBookingDirect(payload.id, payload.token);
+        break;
+
+      case "directRejectBooking":
+        actor = "email_token_rejection";
+        resultData = rejectBookingDirect(payload.id, payload.token, payload.reason);
         break;
 
       case "adminLogin":
@@ -3561,15 +3579,10 @@ function sendNewBookingNotificationToAdmins(booking) {
   if (bccRecipients.length === 0) return;
 
   var token = generateApprovalToken(booking);
-  var gasUrl = "https://script.google.com/macros/s/AKfycbxhyoxEr6_YKysnI272d_O047z2cFXMixyAXrvi_jWTVJkXyXjFSrrVkRZ_G6brt5vY/exec";
-  try {
-    var liveUrl = ScriptApp.getService().getUrl();
-    if (liveUrl) gasUrl = liveUrl;
-  } catch (e) {}
-
-  var approveUrl = gasUrl + "?action=approve_booking&id=" + encodeURIComponent(booking.booking_id) + "&token=" + encodeURIComponent(token);
-  var rejectUrl = gasUrl + "?action=reject_booking&id=" + encodeURIComponent(booking.booking_id) + "&token=" + encodeURIComponent(token);
-  var adminPanelUrl = "https://masterphum07-web.github.io/MUSIC-PI/?admin=true";
+  var webAppBaseUrl = "https://masterphum07-web.github.io/MUSIC-PI/";
+  var approveUrl = webAppBaseUrl + "?action=approve_booking&id=" + encodeURIComponent(booking.booking_id) + "&token=" + encodeURIComponent(token);
+  var rejectUrl = webAppBaseUrl + "?action=reject_booking&id=" + encodeURIComponent(booking.booking_id) + "&token=" + encodeURIComponent(token);
+  var adminPanelUrl = webAppBaseUrl + "?admin=true";
 
   var content = '<h3 style="margin-top: 0; color: #0F3D5C;">มีคำขอจองห้องซ้อมดนตรีใหม่ (รออนุมัติ)</h3>' +
     '<p>มีรายการคำขอจองห้องซ้อมใหม่ กรุณาตรวจสอบและกดอนุมัติหรือปฏิเสธคำขอ:</p>' +
