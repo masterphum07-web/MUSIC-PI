@@ -31,7 +31,13 @@ async function main() {
 
     // 4. Switch to gh-pages
     console.log('--- Step 3: Switching to gh-pages branch ---');
+    try {
+      run('git fetch origin gh-pages');
+    } catch (e) {}
     run('git checkout gh-pages');
+    try {
+      run('git reset --hard origin/gh-pages');
+    } catch (e) {}
 
     // 5. Remove existing files in gh-pages except .git and node_modules
     console.log('--- Step 4: Cleaning gh-pages working directory ---');
@@ -46,6 +52,9 @@ async function main() {
     console.log('--- Step 5: Copying built files to gh-pages root ---');
     fs.cpSync(tempDeployDir, rootDir, { recursive: true });
 
+    // Ensure .gitignore exists on gh-pages branch so node_modules is never added
+    fs.writeFileSync(path.join(rootDir, '.gitignore'), 'node_modules/\n', 'utf8');
+
     // 7. Commit & Push
     console.log('--- Step 6: Committing and pushing gh-pages ---');
     run('git add -A');
@@ -54,7 +63,7 @@ async function main() {
     } catch (e) {
       console.log('Nothing new to commit on gh-pages');
     }
-    run('git push --force origin gh-pages');
+    run('git push origin gh-pages');
     console.log('Successfully pushed to gh-pages branch!');
   } finally {
     // 8. Return to main branch
