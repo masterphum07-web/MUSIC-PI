@@ -155,6 +155,38 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
         </div>
       </div>
 
+      {/* Pending Approvals Alert Banner */}
+      {!!(kpi.pending_approvals && kpi.pending_approvals > 0) && (
+        <div className="bg-gradient-to-r from-amber-50 via-amber-100/70 to-amber-50 border-2 border-amber-300 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-bold text-lg shadow-md flex-shrink-0">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="font-extrabold text-amber-950 text-sm sm:text-base flex items-center gap-2">
+                <span>มีคำขอจองห้องใหม่รอการอนุมัติ</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-600 text-white font-mono text-xs font-bold shadow-xs">
+                  {kpi.pending_approvals} รายการ
+                </span>
+              </div>
+              <p className="text-xs text-amber-800/90 mt-0.5">
+                นักศึกษาส่งคำขอจองเข้ามาและกำลังรอผู้ดูแลระบบตรวจสอบ เพื่อส่งรหัสห้องและ QR Code ให้ใช้งาน
+              </p>
+            </div>
+          </div>
+
+          {onNavigateTab && (
+            <button
+              onClick={() => onNavigateTab('reservations')}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-900 text-white hover:bg-amber-850 font-bold text-xs shadow-md transition-all active:scale-95 flex-shrink-0"
+            >
+              <span>ไปหน้าอนุมัติคิว</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* 2. Modern Bento KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {/* KPI 1: คิวจองวันนี้ */}

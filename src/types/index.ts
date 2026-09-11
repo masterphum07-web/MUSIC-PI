@@ -8,6 +8,7 @@
 
 // สถานะของการจอง
 export type BookingStatus =
+  | 'pending_approval'
   | 'booked'
   | 'checked_in'
   | 'checked_out'
@@ -141,6 +142,7 @@ export interface AuditLog {
 export interface DashboardKPI {
   today_bookings: number;
   active_now: number;
+  pending_approvals?: number;
   utilization_rate: number;
   no_show_rate: number;
   total_bookings_all_time: number;

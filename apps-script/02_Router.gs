@@ -21,7 +21,13 @@ function doGet(e) {
     var action = params.action || "getPublicState";
     var date = params.date || "";
 
-    if (action === "getPublicState") {
+    if (action === "approve_booking") {
+      var approvalResult = approveBookingDirect(params.id, params.token);
+      return renderApprovalHtmlPage(approvalResult.booking, true, approvalResult.message);
+    } else if (action === "reject_booking") {
+      var rejectionResult = rejectBookingDirect(params.id, params.token, params.reason);
+      return renderApprovalHtmlPage(rejectionResult.booking, false, rejectionResult.message);
+    } else if (action === "getPublicState") {
       var state = getPublicState(date);
       return createJsonResponse({ ok: true, data: state });
     } else if (action === "ping") {
@@ -41,11 +47,71 @@ function doGet(e) {
     });
   } catch (err) {
     writeLog("system", "doGet", "SYSTEM_ERROR", "API", "", err.message);
+    if (params && (params.action === "approve_booking" || params.action === "reject_booking")) {
+      return renderApprovalHtmlPage(null, false, "เกิดข้อผิดพลาด: " + err.message);
+    }
     return createJsonResponse({
       ok: false,
       error: { code: "SERVER_ERROR", message: err.message }
     });
   }
+}
+
+/**
+ * แสดงผลหน้าเว็บตอบกลับเมื่อคลิกอนุมัติหรือปฏิเสธผ่านอีเมล
+ */
+function renderApprovalHtmlPage(booking, isApproved, message) {
+  var title = isApproved ? "อนุมัติการจองห้องซ้อมสำเร็จ" : "ปฏิเสธคำขอการจองเรียบร้อย";
+  var icon = isApproved ? "✅" : "❌";
+  var badgeBg = isApproved ? "#DCFCE7" : "#FEE2E2";
+  var headingColor = isApproved ? "#15803D" : "#B91C1C";
+  var bCode = booking ? booking.booking_code : "-";
+  var bName = booking ? booking.full_name : "-";
+  var bDate = booking ? formatDateToString(booking.booking_date) : "-";
+  var bTime = booking ? (booking.start_time + " - " + booking.end_time + " น.") : "-";
+  var desc = isApproved 
+    ? "ระบบได้เปลี่ยนสถานะเป็น <strong>\"จองแล้ว\" (Booked)</strong> และส่งอีเมลยืนยันพร้อม <strong>รหัสผ่านเข้าห้องและ QR Code</strong> ไปยังผู้จองเรียบร้อยแล้ว"
+    : (message || "ระบบได้ปฏิเสธคำขอนี้และส่งอีเมลแจ้งเตือนไปยังผู้จองเรียบร้อยแล้ว");
+
+  var html = '<!DOCTYPE html>' +
+  '<html lang="th">' +
+  '<head>' +
+    '<meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<title>' + title + ' - ชมรมดนตรี วทก.</title>' +
+    '<style>' +
+      'body { font-family: "Sarabun", Arial, sans-serif; background: #F8FAFC; color: #1E293B; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }' +
+      '.card { background: #FFFFFF; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); max-width: 480px; width: 100%; padding: 36px 28px; text-align: center; border: 1px solid #E2E8F0; }' +
+      '.icon-badge { width: 68px; height: 68px; border-radius: 50%; background: ' + badgeBg + '; display: flex; align-items: center; justify-content: center; font-size: 34px; margin: 0 auto 18px; }' +
+      'h1 { font-size: 20px; color: ' + headingColor + '; margin: 0 0 10px; font-weight: 700; }' +
+      'p { font-size: 14px; color: #64748B; line-height: 1.6; margin: 0 0 20px; }' +
+      '.details { background: #F1F5F9; border-radius: 12px; padding: 16px; text-align: left; font-size: 13px; margin-bottom: 24px; border: 1px solid #E2E8F0; }' +
+      '.details-row { display: flex; justify-content: space-between; margin-bottom: 8px; }' +
+      '.details-row:last-child { margin-bottom: 0; }' +
+      '.btn { display: inline-block; background: #0F3D5C; color: #FFFFFF; padding: 12px 26px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 13px; box-shadow: 0 2px 6px rgba(15,61,92,0.25); }' +
+    '</style>' +
+  '</head>' +
+  '<body>' +
+    '<div class="card">' +
+      '<div class="icon-badge">' + icon + '</div>' +
+      '<h1>' + title + '</h1>' +
+      '<p>' + desc + '</p>' +
+      (booking ? (
+        '<div class="details">' +
+          '<div class="details-row"><span style="color:#64748B">รหัสคำขอ:</span><strong style="font-family:monospace; color:#0F3D5C; font-size:14px;">' + bCode + '</strong></div>' +
+          '<div class="details-row"><span style="color:#64748B">ผู้จอง:</span><span>' + bName + '</span></div>' +
+          '<div class="details-row"><span style="color:#64748B">วันที่ใช้งาน:</span><span>' + bDate + '</span></div>' +
+          '<div class="details-row"><span style="color:#64748B">เวลา:</span><span>' + bTime + '</span></div>' +
+        '</div>'
+      ) : '') +
+      '<a href="https://masterphum07-web.github.io/MUSIC-PI/?admin=true" class="btn">เปิดระบบจัดการหลังบ้าน (Admin Console)</a>' +
+    '</div>' +
+  '</body>' +
+  '</html>';
+
+  return HtmlService.createHtmlOutput(html)
+    .setTitle(title + " - ชมรมดนตรี วทก.")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 /**
@@ -148,6 +214,16 @@ function doPost(e) {
       case "adminListBookings":
         requireAuth(token, "staff");
         resultData = adminListBookings(payload);
+        break;
+
+      case "adminApproveBooking":
+        var adminApprove = requireAuth(token, "staff");
+        resultData = adminApproveBooking(payload.booking_id, adminApprove.adminUser);
+        break;
+
+      case "adminRejectBooking":
+        var adminReject = requireAuth(token, "staff");
+        resultData = adminRejectBooking(payload.booking_id, payload.reason, adminReject.adminUser);
         break;
 
       case "adminUpdateBooking":

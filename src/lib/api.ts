@@ -293,6 +293,29 @@ export async function adminForceCheckout(
   });
 }
 
+export async function adminApproveBooking(
+  token: string,
+  bookingId: string
+): Promise<Booking> {
+  return callApi<Booking>({
+    action: 'adminApproveBooking',
+    payload: { booking_id: bookingId },
+    token,
+  });
+}
+
+export async function adminRejectBooking(
+  token: string,
+  bookingId: string,
+  reason?: string
+): Promise<Booking> {
+  return callApi<Booking>({
+    action: 'adminRejectBooking',
+    payload: { booking_id: bookingId, reason: reason || '' },
+    token,
+  });
+}
+
 export async function adminGetLogs(
   token: string,
   query: { actor_type?: string; action?: string; search?: string; page?: number; limit?: number }

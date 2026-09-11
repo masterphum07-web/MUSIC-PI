@@ -1,7 +1,7 @@
 /**
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
  * BUNDLED CODE.GS - รวมทุกโมดูลสำหรับ Google Apps Script
- * อัปเดตล่าสุด: 2026-09-11T01:46:25.624Z
+ * อัปเดตล่าสุด: 2026-09-11T07:38:46.035Z
  */
 
 /* ============================================================================== */
@@ -155,7 +155,7 @@ function getDatabaseSchema() {
       },
       validations: {
         8: ["ปี 1", "ปี 2", "ปี 3", "ปี 4", "บุคลากร"],
-        15: ["booked", "checked_in", "checked_out", "cancelled", "no_show", "overdue"]
+        15: ["pending_approval", "booked", "checked_in", "checked_out", "cancelled", "no_show", "overdue"]
       }
     },
     {
@@ -769,7 +769,13 @@ function doGet(e) {
     var action = params.action || "getPublicState";
     var date = params.date || "";
 
-    if (action === "getPublicState") {
+    if (action === "approve_booking") {
+      var approvalResult = approveBookingDirect(params.id, params.token);
+      return renderApprovalHtmlPage(approvalResult.booking, true, approvalResult.message);
+    } else if (action === "reject_booking") {
+      var rejectionResult = rejectBookingDirect(params.id, params.token, params.reason);
+      return renderApprovalHtmlPage(rejectionResult.booking, false, rejectionResult.message);
+    } else if (action === "getPublicState") {
       var state = getPublicState(date);
       return createJsonResponse({ ok: true, data: state });
     } else if (action === "ping") {
@@ -789,11 +795,71 @@ function doGet(e) {
     });
   } catch (err) {
     writeLog("system", "doGet", "SYSTEM_ERROR", "API", "", err.message);
+    if (params && (params.action === "approve_booking" || params.action === "reject_booking")) {
+      return renderApprovalHtmlPage(null, false, "เกิดข้อผิดพลาด: " + err.message);
+    }
     return createJsonResponse({
       ok: false,
       error: { code: "SERVER_ERROR", message: err.message }
     });
   }
+}
+
+/**
+ * แสดงผลหน้าเว็บตอบกลับเมื่อคลิกอนุมัติหรือปฏิเสธผ่านอีเมล
+ */
+function renderApprovalHtmlPage(booking, isApproved, message) {
+  var title = isApproved ? "อนุมัติการจองห้องซ้อมสำเร็จ" : "ปฏิเสธคำขอการจองเรียบร้อย";
+  var icon = isApproved ? "✅" : "❌";
+  var badgeBg = isApproved ? "#DCFCE7" : "#FEE2E2";
+  var headingColor = isApproved ? "#15803D" : "#B91C1C";
+  var bCode = booking ? booking.booking_code : "-";
+  var bName = booking ? booking.full_name : "-";
+  var bDate = booking ? formatDateToString(booking.booking_date) : "-";
+  var bTime = booking ? (booking.start_time + " - " + booking.end_time + " น.") : "-";
+  var desc = isApproved 
+    ? "ระบบได้เปลี่ยนสถานะเป็น <strong>\"จองแล้ว\" (Booked)</strong> และส่งอีเมลยืนยันพร้อม <strong>รหัสผ่านเข้าห้องและ QR Code</strong> ไปยังผู้จองเรียบร้อยแล้ว"
+    : (message || "ระบบได้ปฏิเสธคำขอนี้และส่งอีเมลแจ้งเตือนไปยังผู้จองเรียบร้อยแล้ว");
+
+  var html = '<!DOCTYPE html>' +
+  '<html lang="th">' +
+  '<head>' +
+    '<meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<title>' + title + ' - ชมรมดนตรี วทก.</title>' +
+    '<style>' +
+      'body { font-family: "Sarabun", Arial, sans-serif; background: #F8FAFC; color: #1E293B; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }' +
+      '.card { background: #FFFFFF; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); max-width: 480px; width: 100%; padding: 36px 28px; text-align: center; border: 1px solid #E2E8F0; }' +
+      '.icon-badge { width: 68px; height: 68px; border-radius: 50%; background: ' + badgeBg + '; display: flex; align-items: center; justify-content: center; font-size: 34px; margin: 0 auto 18px; }' +
+      'h1 { font-size: 20px; color: ' + headingColor + '; margin: 0 0 10px; font-weight: 700; }' +
+      'p { font-size: 14px; color: #64748B; line-height: 1.6; margin: 0 0 20px; }' +
+      '.details { background: #F1F5F9; border-radius: 12px; padding: 16px; text-align: left; font-size: 13px; margin-bottom: 24px; border: 1px solid #E2E8F0; }' +
+      '.details-row { display: flex; justify-content: space-between; margin-bottom: 8px; }' +
+      '.details-row:last-child { margin-bottom: 0; }' +
+      '.btn { display: inline-block; background: #0F3D5C; color: #FFFFFF; padding: 12px 26px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 13px; box-shadow: 0 2px 6px rgba(15,61,92,0.25); }' +
+    '</style>' +
+  '</head>' +
+  '<body>' +
+    '<div class="card">' +
+      '<div class="icon-badge">' + icon + '</div>' +
+      '<h1>' + title + '</h1>' +
+      '<p>' + desc + '</p>' +
+      (booking ? (
+        '<div class="details">' +
+          '<div class="details-row"><span style="color:#64748B">รหัสคำขอ:</span><strong style="font-family:monospace; color:#0F3D5C; font-size:14px;">' + bCode + '</strong></div>' +
+          '<div class="details-row"><span style="color:#64748B">ผู้จอง:</span><span>' + bName + '</span></div>' +
+          '<div class="details-row"><span style="color:#64748B">วันที่ใช้งาน:</span><span>' + bDate + '</span></div>' +
+          '<div class="details-row"><span style="color:#64748B">เวลา:</span><span>' + bTime + '</span></div>' +
+        '</div>'
+      ) : '') +
+      '<a href="https://masterphum07-web.github.io/MUSIC-PI/?admin=true" class="btn">เปิดระบบจัดการหลังบ้าน (Admin Console)</a>' +
+    '</div>' +
+  '</body>' +
+  '</html>';
+
+  return HtmlService.createHtmlOutput(html)
+    .setTitle(title + " - ชมรมดนตรี วทก.")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 /**
@@ -896,6 +962,16 @@ function doPost(e) {
       case "adminListBookings":
         requireAuth(token, "staff");
         resultData = adminListBookings(payload);
+        break;
+
+      case "adminApproveBooking":
+        var adminApprove = requireAuth(token, "staff");
+        resultData = adminApproveBooking(payload.booking_id, adminApprove.adminUser);
+        break;
+
+      case "adminRejectBooking":
+        var adminReject = requireAuth(token, "staff");
+        resultData = adminRejectBooking(payload.booking_id, payload.reason, adminReject.adminUser);
         break;
 
       case "adminUpdateBooking":
@@ -1303,9 +1379,9 @@ function isOverlapping(roomId, dateStr, startTime, endTime, excludeBookingId) {
       continue;
     }
 
-    // นับเฉพาะสถานะ booked และ checked_in
+    // นับเฉพาะสถานะ pending_approval, booked และ checked_in
     var status = String(b.status).trim().toLowerCase();
-    if (status !== "booked" && status !== "checked_in") {
+    if (status !== "pending_approval" && status !== "booked" && status !== "checked_in") {
       continue;
     }
 
@@ -1527,7 +1603,7 @@ function createBooking(rawPayload, context) {
   var userBookingsToday = findRowsByCondition("Bookings", function(row) {
     var bDateStr = formatDateToString(row.booking_date);
     var isSameUser = String(row.full_name).trim().toLowerCase() === payload.full_name.toLowerCase();
-    var activeStatus = (row.status === "booked" || row.status === "checked_in");
+    var activeStatus = (row.status === "pending_approval" || row.status === "booked" || row.status === "checked_in");
     return (bDateStr === payload.booking_date && isSameUser && activeStatus);
   });
 
@@ -1562,7 +1638,7 @@ function createBooking(rawPayload, context) {
       party_size: payload.party_size,
       purpose: payload.purpose,
       equipment: payload.equipment || "",
-      status: "booked",
+      status: "pending_approval",
       created_at: now,
       checkin_at: "",
       checkout_at: "",
@@ -1589,7 +1665,8 @@ function createBooking(rawPayload, context) {
         room_id: payload.room_id,
         date: payload.booking_date,
         time: payload.start_time + "-" + payload.end_time,
-        party_size: payload.party_size
+        party_size: payload.party_size,
+        status: "pending_approval"
       },
       context ? context.userAgent : "",
       context ? context.ipHash : ""
@@ -1599,12 +1676,12 @@ function createBooking(rawPayload, context) {
   }
 
   // ส่งอีเมลแจ้งเตือนภายนอก LockService (Non-blocking)
-  // 1. ส่งอีเมลยืนยันการจองให้ผู้จองก่อนเป็นลำดับแรกสุดเสมอ (Priority #1)
+  // 1. ส่งอีเมลแจ้ง "อยู่ระหว่างรออนุมัติ" ให้ผู้จอง (Priority #1) - ยังไม่ส่งรหัสผ่านห้อง
   if (createdBooking.email) {
     try {
-      sendBookingConfirmationToUser(createdBooking);
+      sendBookingPendingToUser(createdBooking);
     } catch (userMailErr) {
-      Logger.log("ไม่สามารถส่งเมลยืนยันถึงผู้จอง: " + userMailErr.message);
+      Logger.log("ไม่สามารถส่งเมลแจ้งรออนุมัติถึงผู้จอง: " + userMailErr.message);
       try {
         writeLog("system", "Mailer", "USER_MAIL_ERROR", "MAIL", createdBooking.booking_code, userMailErr.message);
       } catch (logErr1) {}
@@ -1814,6 +1891,9 @@ function lookupBooking(bookingCode, fullName) {
 function checkIn(bookingCode, fullName, context) {
   var booking = lookupBooking(bookingCode, fullName);
   
+  if (booking.status === "pending_approval") {
+    throw new Error("คิวนี้อยู่ระหว่างรอผู้ดูแลระบบอนุมัติ ยังไม่สามารถเช็คอินได้");
+  }
   if (booking.status === "checked_in") {
     throw new Error("คิวนี้ได้ทำการเช็คอินไปแล้วเมื่อ " + booking.checkin_at);
   }
@@ -2036,6 +2116,141 @@ function resendBookingConfirmation(bookingCode, newEmail) {
     success: true,
     message: "ระบบได้จัดส่งอีเมลยืนยันการจองไปยัง " + targetEmail + " เรียบร้อยแล้ว",
     sent_to: targetEmail
+  };
+}
+
+/**
+ * สร้าง Approval Security Token สำหรับลิงก์อนุมัติในอีเมล
+ * @param {Object} booking
+ * @returns {string} token
+ */
+function generateApprovalToken(booking) {
+  var bId = String(booking.booking_id || "").trim();
+  var bCode = String(booking.booking_code || "").trim();
+  var raw = bId + "_" + bCode + "_wtk_approval_secret";
+  var signature = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw);
+  var tokenStr = "";
+  for (var i = 0; i < signature.length; i++) {
+    var b = signature[i];
+    if (b < 0) b += 256;
+    var hex = b.toString(16);
+    if (hex.length === 1) hex = "0" + hex;
+    tokenStr += hex;
+  }
+  return tokenStr.substring(0, 32);
+}
+
+/**
+ * ตรวจสอบความถูกต้องของ Approval Token
+ */
+function verifyApprovalToken(booking, token) {
+  if (!token) return false;
+  var expected = generateApprovalToken(booking);
+  return expected === String(token).trim();
+}
+
+/**
+ * อนุมัติการจองโดยตรงผ่านลิงก์ 1-Click ในอีเมล
+ * @param {string} bookingId
+ * @param {string} token
+ * @returns {Object} ผลลัพธ์
+ */
+function approveBookingDirect(bookingId, token) {
+  var cleanId = String(bookingId || "").trim();
+  var booking = findRowById("Bookings", "booking_id", cleanId);
+  if (!booking) {
+    throw new Error("ไม่พบข้อมูลการจองในระบบ");
+  }
+
+  if (!verifyApprovalToken(booking, token)) {
+    throw new Error("ลิงก์อนุมัติไม่ถูกต้อง หรือหมดอายุแล้ว");
+  }
+
+  var currentStatus = String(booking.status || "").toLowerCase();
+  if (currentStatus === "booked" || currentStatus === "checked_in" || currentStatus === "checked_out") {
+    return {
+      alreadyProcessed: true,
+      message: "รายการจองนี้ได้รับการอนุมัติเรียบร้อยแล้ว",
+      booking: booking
+    };
+  }
+  if (currentStatus === "cancelled") {
+    throw new Error("รายการจองนี้ถูกยกเลิกไปแล้ว ไม่สามารถอนุมัติได้");
+  }
+
+  var now = new Date();
+  var updated = updateRow("Bookings", "booking_id", cleanId, {
+    status: "booked",
+    updated_at: now,
+    updated_by: "email_approval"
+  });
+
+  writeLog("admin", "email_approval", "APPROVE_BOOKING", "BOOKING", booking.booking_code, { via: "email_1click" });
+
+  // ส่งอีเมลยืนยันการจองตัวจริง (พร้อมรหัสห้องและ QR Code) ให้ผู้จอง
+  try {
+    sendBookingConfirmationToUser(updated);
+  } catch (mailErr) {
+    Logger.log("ส่งเมลยืนยันหลังอนุมัติไม่สำเร็จ: " + mailErr.message);
+  }
+
+  return {
+    success: true,
+    message: "อนุมัติการจองห้องซ้อมดนตรีเรียบร้อยแล้ว",
+    booking: updated
+  };
+}
+
+/**
+ * ปฏิเสธการจองโดยตรงผ่านลิงก์ในอีเมล
+ * @param {string} bookingId
+ * @param {string} token
+ * @param {string} [reason]
+ * @returns {Object} ผลลัพธ์
+ */
+function rejectBookingDirect(bookingId, token, reason) {
+  var cleanId = String(bookingId || "").trim();
+  var booking = findRowById("Bookings", "booking_id", cleanId);
+  if (!booking) {
+    throw new Error("ไม่พบข้อมูลการจองในระบบ");
+  }
+
+  if (!verifyApprovalToken(booking, token)) {
+    throw new Error("ลิงก์ไม่ถูกต้อง หรือหมดอายุแล้ว");
+  }
+
+  var currentStatus = String(booking.status || "").toLowerCase();
+  if (currentStatus === "cancelled") {
+    return {
+      alreadyProcessed: true,
+      message: "รายการจองนี้ถูกยกเลิก/ปฏิเสธเรียบร้อยแล้ว",
+      booking: booking
+    };
+  }
+
+  var rejectReason = reason || "ผู้ดูแลระบบปฏิเสธคำขอการจอง";
+  var now = new Date();
+  var updated = updateRow("Bookings", "booking_id", cleanId, {
+    status: "cancelled",
+    cancelled_at: now,
+    cancel_reason: rejectReason,
+    updated_at: now,
+    updated_by: "email_rejection"
+  });
+
+  writeLog("admin", "email_rejection", "REJECT_BOOKING", "BOOKING", booking.booking_code, { reason: rejectReason, via: "email_1click" });
+
+  // ส่งอีเมลแจ้งผู้จองว่าคำขอถูกปฏิเสธ
+  try {
+    sendBookingRejectionToUser(updated, rejectReason);
+  } catch (mailErr) {
+    Logger.log("ส่งเมลแจ้งปฏิเสธไม่สำเร็จ: " + mailErr.message);
+  }
+
+  return {
+    success: true,
+    message: "ปฏิเสธคำขอการจองเรียบร้อยแล้ว",
+    booking: updated
   };
 }
 
@@ -2415,6 +2630,7 @@ function adminGetDashboard() {
   // 1. คำนวณ KPI ภาพรวม
   var totalBookingsToday = 0;
   var activeNow = 0;
+  var totalPendingApprovals = 0;
   var totalCompletedOrCheckedIn = 0;
   var totalNoShow = 0;
   var totalBookingsAll = bookings.length;
@@ -2455,6 +2671,10 @@ function adminGetDashboard() {
       if (status === "checked_in") {
         activeNow++;
       }
+    }
+
+    if (status === "pending_approval") {
+      totalPendingApprovals++;
     }
 
     if (status === "no_show") {
@@ -2580,6 +2800,7 @@ function adminGetDashboard() {
     kpi: {
       today_bookings: totalBookingsToday,
       active_now: activeNow,
+      pending_approvals: totalPendingApprovals,
       utilization_rate: utilizationRate,
       no_show_rate: noShowRate,
       total_bookings_all_time: totalBookingsAll
@@ -2737,6 +2958,75 @@ function adminForceCheckout(bookingId, note, adminUser) {
   });
 
   writeLog("admin", adminUser.username, "FORCE_CHECKOUT", "BOOKING", booking.booking_code, { note: note });
+  return updated;
+}
+
+/**
+ * แอดมินอนุมัติการจอง (Approve Booking)
+ * @param {string} bookingId
+ * @param {Object} adminUser
+ * @returns {Object} updated booking
+ */
+function adminApproveBooking(bookingId, adminUser) {
+  var cleanId = String(bookingId || "").trim();
+  var booking = findRowById("Bookings", "booking_id", cleanId);
+  if (!booking) {
+    throw new Error("ไม่พบข้อมูลการจอง");
+  }
+
+  var now = new Date();
+  var updated = updateRow("Bookings", "booking_id", cleanId, {
+    status: "booked",
+    updated_at: now,
+    updated_by: adminUser.username
+  });
+
+  writeLog("admin", adminUser.username, "APPROVE_BOOKING", "BOOKING", booking.booking_code, { action: "approved" });
+
+  // ส่งอีเมลยืนยันการจองตัวจริง (พร้อมรหัสห้องและ QR Code) ให้ผู้จอง
+  try {
+    sendBookingConfirmationToUser(updated);
+  } catch (mailErr) {
+    Logger.log("ไม่สามารถส่งอีเมลยืนยันการจอง: " + mailErr.message);
+  }
+
+  return updated;
+}
+
+/**
+ * แอดมินปฏิเสธคำขอการจอง (Reject Booking)
+ * @param {string} bookingId
+ * @param {string} reason
+ * @param {Object} adminUser
+ * @returns {Object} updated booking
+ */
+function adminRejectBooking(bookingId, reason, adminUser) {
+  var cleanId = String(bookingId || "").trim();
+  var booking = findRowById("Bookings", "booking_id", cleanId);
+  if (!booking) {
+    throw new Error("ไม่พบข้อมูลการจอง");
+  }
+
+  var rejectReason = reason || "ผู้ดูแลระบบปฏิเสธคำขอการจอง";
+  var now = new Date();
+  var updated = updateRow("Bookings", "booking_id", cleanId, {
+    status: "cancelled",
+    cancelled_at: now,
+    cancel_reason: rejectReason,
+    admin_note: (booking.admin_note ? booking.admin_note + " | " : "") + "ไม่อนุมัติ: " + sanitizeInput(rejectReason),
+    updated_at: now,
+    updated_by: adminUser.username
+  });
+
+  writeLog("admin", adminUser.username, "REJECT_BOOKING", "BOOKING", booking.booking_code, { reason: rejectReason });
+
+  // ส่งอีเมลแจ้งผู้จองว่าคำขอถูกปฏิเสธ
+  try {
+    sendBookingRejectionToUser(updated, rejectReason);
+  } catch (mailErr) {
+    Logger.log("ไม่สามารถส่งอีเมลแจ้งปฏิเสธ: " + mailErr.message);
+  }
+
   return updated;
 }
 
@@ -3200,14 +3490,60 @@ function buildBaseEmailTemplate(title, badgeText, badgeColor, contentHtml) {
 }
 
 /**
- * 1. อีเมลแจ้งเตือนแอดมิน: มีการจองคิวใหม่
+ * 1. อีเมลแจ้งผู้จอง: คำขอจองได้รับการบันทึกแล้ว อยู่ระหว่างรอการอนุมัติจากผู้ดูแลระบบ
+ */
+function sendBookingPendingToUser(booking) {
+  var userEmail = String(booking.email || "").trim();
+  if (!userEmail) return;
+
+  var content = '<h3 style="margin-top: 0; color: #0F3D5C;">คำขอจองห้องซ้อมดนตรีอยู่ระหว่างรอการอนุมัติ</h3>' +
+    '<p>สวัสดีคุณ <strong>' + booking.full_name + '</strong> ระบบได้รับคำขอจองห้องซ้อมดนตรีของคุณเรียบร้อยแล้ว ขณะนี้อยู่ระหว่างการตรวจสอบและอนุมัติจากผู้ดูแลระบบชมรมดนตรี วทก.</p>' +
+    
+    '<div style="text-align: center; margin: 20px 0; padding: 16px; background-color: #FEF3C7; border-radius: 12px; border: 1px solid #FDE68A;">' +
+      '<div style="font-size: 15px; font-weight: bold; color: #92400E;">⏳ สถานะ: รอการอนุมัติจากผู้ดูแลระบบ (Pending Approval)</div>' +
+      '<div style="font-size: 12px; color: #78350F; margin-top: 6px;">เมื่อคำขอของคุณได้รับการอนุมัติ ระบบจะส่งอีเมลยืนยันพร้อม <strong>รหัสผ่านเข้าห้อง</strong> และ <strong>QR Code สำหรับเช็คอิน</strong> ให้ท่านผ่านอีเมลนี้ทันที</div>' +
+    '</div>' +
+
+    '<table style="width: 100%; border-collapse: collapse; margin: 16px 0; background-color: #F8FAFC; border-radius: 8px; overflow: hidden;">' +
+      '<tr><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; color: #64748B; width: 35%;">ห้องซ้อม:</td><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; font-weight: bold;">' + booking.room_id + '</td></tr>' +
+      '<tr><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; color: #64748B;">วันที่ใช้งาน:</td><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; font-weight: bold;">' + booking.booking_date + '</td></tr>' +
+      '<tr><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; color: #64748B;">เวลา:</td><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; font-weight: bold;">' + booking.start_time + ' - ' + booking.end_time + ' น.</td></tr>' +
+      '<tr><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; color: #64748B;">ผู้จอง:</td><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0;">' + booking.full_name + ' (' + booking.student_year + ')</td></tr>' +
+      '<tr><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; color: #64748B;">สาขาวิชา:</td><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0;">' + booking.major + '</td></tr>' +
+      '<tr><td style="padding: 10px 14px; color: #64748B;">วัตถุประสงค์:</td><td style="padding: 10px 14px;">' + booking.purpose + ' (' + booking.party_size + ' คน)</td></tr>' +
+    '</table>' +
+    '<div style="background-color: #EFF6FF; border-left: 4px solid #3B82F6; padding: 12px; font-size: 13px; color: #1E40AF; margin-top: 16px; border-radius: 4px;">' +
+      '<strong>ℹ️ หมายเหตุ:</strong> ยังไม่สามารถเข้าใช้ห้องได้จนกว่าจะได้รับการอนุมัติ หากมีข้อสงสัยสามารถติดต่อผู้ดูแลระบบห้องซ้อมดนตรีได้ครับ' +
+    '</div>';
+
+  var html = buildBaseEmailTemplate("คำขอจองห้องซ้อมดนตรี: รอการอนุมัติ", "รอการอนุมัติ", "#D97706", content);
+  safeSendEmail({
+    to: userEmail,
+    subject: "[รออนุมัติ] คำขอจองห้องซ้อมดนตรี วทก. (" + booking.booking_date + " เวลา " + booking.start_time + "-" + booking.end_time + " น.)",
+    htmlBody: html
+  });
+}
+
+/**
+ * 2. อีเมลแจ้งเตือนแอดมิน: มีการจองคิวใหม่รออนุมัติ พร้อมปุ่ม 1-Click Action
  */
 function sendNewBookingNotificationToAdmins(booking) {
   var bccRecipients = getRecipientsForEvent("notify_on_booking");
   if (bccRecipients.length === 0) return;
 
-  var content = '<h3 style="margin-top: 0; color: #0F3D5C;">มีรายการจองห้องซ้อมดนตรีใหม่</h3>' +
-    '<p>รายละเอียดการจองมีดังนี้:</p>' +
+  var token = generateApprovalToken(booking);
+  var gasUrl = "https://script.google.com/macros/s/AKfycbxhyoxEr6_YKysnI272d_O047z2cFXMixyAXrvi_jWTVJkXyXjFSrrVkRZ_G6brt5vY/exec";
+  try {
+    var liveUrl = ScriptApp.getService().getUrl();
+    if (liveUrl) gasUrl = liveUrl;
+  } catch (e) {}
+
+  var approveUrl = gasUrl + "?action=approve_booking&id=" + encodeURIComponent(booking.booking_id) + "&token=" + encodeURIComponent(token);
+  var rejectUrl = gasUrl + "?action=reject_booking&id=" + encodeURIComponent(booking.booking_id) + "&token=" + encodeURIComponent(token);
+  var adminPanelUrl = "https://masterphum07-web.github.io/MUSIC-PI/?admin=true";
+
+  var content = '<h3 style="margin-top: 0; color: #0F3D5C;">มีคำขอจองห้องซ้อมดนตรีใหม่ (รออนุมัติ)</h3>' +
+    '<p>มีรายการคำขอจองห้องซ้อมใหม่ กรุณาตรวจสอบและกดอนุมัติหรือปฏิเสธคำขอ:</p>' +
     '<table style="width: 100%; border-collapse: collapse; margin: 16px 0; background-color: #F8FAFC; border-radius: 8px; overflow: hidden;">' +
       '<tr><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; font-weight: bold; width: 35%;">รหัสการจอง:</td><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; color: #0F3D5C; font-weight: bold;">' + booking.booking_code + '</td></tr>' +
       '<tr><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; font-weight: bold;">ห้องซ้อม:</td><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0;">' + booking.room_id + '</td></tr>' +
@@ -3215,19 +3551,66 @@ function sendNewBookingNotificationToAdmins(booking) {
       '<tr><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; font-weight: bold;">ช่วงเวลา:</td><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0;">' + booking.start_time + ' - ' + booking.end_time + ' น.</td></tr>' +
       '<tr><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; font-weight: bold;">ผู้จอง:</td><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0;">' + booking.full_name + ' (' + booking.student_year + ')</td></tr>' +
       '<tr><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; font-weight: bold;">สาขาวิชา:</td><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0;">' + booking.major + '</td></tr>' +
-      '<tr><td style="padding: 10px 14px; font-weight: bold;">วัตถุประสงค์:</td><td style="padding: 10px 14px;">' + booking.purpose + ' (สมาชิก ' + booking.party_size + ' คน)</td></tr>' +
-    '</table>';
+      '<tr><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; font-weight: bold;">เบอร์ติดต่อ:</td><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0;">' + (booking.phone || '-') + '</td></tr>' +
+      '<tr><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0; font-weight: bold;">อีเมล:</td><td style="padding: 10px 14px; border-bottom: 1px solid #E2E8F0;">' + (booking.email || '-') + '</td></tr>' +
+      '<tr><td style="padding: 10px 14px; font-weight: bold;">วัตถุประสงค์:</td><td style="padding: 10px 14px;">' + booking.purpose + ' (' + booking.party_size + ' คน)</td></tr>' +
+    '</table>' +
 
-  var html = buildBaseEmailTemplate("การจองใหม่: " + booking.booking_code, "จองคิวใหม่", "#16A34A", content);
+    // 1-Click Action Buttons
+    '<div style="text-align: center; margin: 24px 0; padding: 20px; background-color: #FEF3C7; border-radius: 12px; border: 1px solid #FDE68A;">' +
+      '<div style="font-size: 14px; font-weight: bold; color: #92400E; margin-bottom: 14px;">⚡ ดำเนินการอนุมัติคิวนี้ทันที (1-Click Actions):</div>' +
+      '<div>' +
+        '<a href="' + approveUrl + '" target="_blank" style="display: inline-block; background-color: #16A34A; color: #FFFFFF; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: bold; font-size: 13px; margin: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.15);">' +
+          '✅ อนุมัติการจอง (Approve)' +
+        '</a>' +
+        '<a href="' + rejectUrl + '" target="_blank" style="display: inline-block; background-color: #DC2626; color: #FFFFFF; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: bold; font-size: 13px; margin: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.15);">' +
+          '❌ ไม่อนุมัติ / ปฏิเสธ (Reject)' +
+        '</a>' +
+      '</div>' +
+      '<div style="margin-top: 14px;">' +
+        '<a href="' + adminPanelUrl + '" target="_blank" style="font-size: 12px; color: #0F3D5C; text-decoration: underline; font-weight: 600;">' +
+          '🔗 หรือเปิดดูและจัดการในระบบแอดมิน (Admin Console)' +
+        '</a>' +
+      '</div>' +
+    '</div>';
+
+  var html = buildBaseEmailTemplate("คำขอจองห้องซ้อมใหม่: " + booking.booking_code, "รออนุมัติ", "#F59E0B", content);
   safeSendEmail({
     bcc: bccRecipients,
-    subject: "[คิวจองใหม่] " + booking.room_id + " วันที่ " + booking.booking_date + " (" + booking.start_time + "-" + booking.end_time + ") โดย " + booking.full_name,
+    subject: "[รออนุมัติคิวใหม่] " + booking.room_id + " วันที่ " + booking.booking_date + " (" + booking.start_time + "-" + booking.end_time + ") โดย " + booking.full_name,
     htmlBody: html
   });
 }
 
 /**
- * 2. ใบยืนยันการจองถึงผู้จอง (ส่งเฉพาะกรณีที่ผู้จองกรอกอีเมล) พร้อม QR Code
+ * 3. อีเมลแจ้งผู้จอง: คำขอจองไม่ได้รับการอนุมัติ (Reject)
+ */
+function sendBookingRejectionToUser(booking, reason) {
+  var userEmail = String(booking.email || "").trim();
+  if (!userEmail) return;
+
+  var content = '<h3 style="margin-top: 0; color: #DC2626;">คำขอจองห้องซ้อมดนตรีไม่ได้รับการอนุมัติ</h3>' +
+    '<p>เรียนคุณ <strong>' + booking.full_name + '</strong> ทางชมรมดนตรี วทก. ขออภัยที่ต้องแจ้งให้ทราบว่าคำขอจองห้องซ้อมดนตรีของคุณไม่ได้รับการอนุมัติ</p>' +
+    '<div style="margin: 16px 0; padding: 14px; background-color: #FEE2E2; border-radius: 8px; border: 1px solid #FECACA; color: #991B1B; font-size: 13px;">' +
+      '<strong>เหตุผลจากผู้ดูแลระบบ:</strong> ' + (reason || "ห้องไม่ว่าง หรือมีกิจกรรมของวิทยาลัยในช่วงเวลาดังกล่าว") +
+    '</div>' +
+    '<table style="width: 100%; border-collapse: collapse; margin: 16px 0; background-color: #F8FAFC; border-radius: 8px; overflow: hidden; font-size: 13px;">' +
+      '<tr><td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; color: #64748B;">รหัสคำขอ:</td><td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0;">' + booking.booking_code + '</td></tr>' +
+      '<tr><td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; color: #64748B;">ห้องซ้อม:</td><td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0;">' + booking.room_id + '</td></tr>' +
+      '<tr><td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; color: #64748B;">วันที่และเวลา:</td><td style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0;">' + booking.booking_date + ' (' + booking.start_time + '-' + booking.end_time + ' น.)</td></tr>' +
+    '</table>' +
+    '<p style="font-size: 13px; color: #64748B;">คุณสามารถเข้าไปเลือกดูตารางเวลาว่าง และส่งคำขอจองในช่วงเวลาอื่นได้ตลอดเวลาที่เว็บไซต์ของชมรมครับ</p>';
+
+  var html = buildBaseEmailTemplate("ผลการขอจองห้องซ้อมดนตรี", "ไม่อนุมัติ", "#DC2626", content);
+  safeSendEmail({
+    to: userEmail,
+    subject: "[ไม่อนุมัติ] ผลการขอจองห้องซ้อมดนตรี วทก. วันที่ " + booking.booking_date,
+    htmlBody: html
+  });
+}
+
+/**
+ * 4. ใบยืนยันการจองถึงผู้จอง (ส่งเฉพาะกรณีที่ผู้จองกรอกอีเมล) พร้อม QR Code
  */
 function sendBookingConfirmationToUser(booking) {
   var userEmail = String(booking.email || "").trim();

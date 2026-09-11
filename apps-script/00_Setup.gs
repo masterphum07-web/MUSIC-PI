@@ -145,7 +145,7 @@ function getDatabaseSchema() {
       },
       validations: {
         8: ["ปี 1", "ปี 2", "ปี 3", "ปี 4", "บุคลากร"],
-        15: ["booked", "checked_in", "checked_out", "cancelled", "no_show", "overdue"]
+        15: ["pending_approval", "booked", "checked_in", "checked_out", "cancelled", "no_show", "overdue"]
       }
     },
     {

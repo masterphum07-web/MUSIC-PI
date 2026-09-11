@@ -27,6 +27,7 @@ function adminGetDashboard() {
   // 1. คำนวณ KPI ภาพรวม
   var totalBookingsToday = 0;
   var activeNow = 0;
+  var totalPendingApprovals = 0;
   var totalCompletedOrCheckedIn = 0;
   var totalNoShow = 0;
   var totalBookingsAll = bookings.length;
@@ -67,6 +68,10 @@ function adminGetDashboard() {
       if (status === "checked_in") {
         activeNow++;
       }
+    }
+
+    if (status === "pending_approval") {
+      totalPendingApprovals++;
     }
 
     if (status === "no_show") {
@@ -192,6 +197,7 @@ function adminGetDashboard() {
     kpi: {
       today_bookings: totalBookingsToday,
       active_now: activeNow,
+      pending_approvals: totalPendingApprovals,
       utilization_rate: utilizationRate,
       no_show_rate: noShowRate,
       total_bookings_all_time: totalBookingsAll
@@ -349,6 +355,75 @@ function adminForceCheckout(bookingId, note, adminUser) {
   });
 
   writeLog("admin", adminUser.username, "FORCE_CHECKOUT", "BOOKING", booking.booking_code, { note: note });
+  return updated;
+}
+
+/**
+ * แอดมินอนุมัติการจอง (Approve Booking)
+ * @param {string} bookingId
+ * @param {Object} adminUser
+ * @returns {Object} updated booking
+ */
+function adminApproveBooking(bookingId, adminUser) {
+  var cleanId = String(bookingId || "").trim();
+  var booking = findRowById("Bookings", "booking_id", cleanId);
+  if (!booking) {
+    throw new Error("ไม่พบข้อมูลการจอง");
+  }
+
+  var now = new Date();
+  var updated = updateRow("Bookings", "booking_id", cleanId, {
+    status: "booked",
+    updated_at: now,
+    updated_by: adminUser.username
+  });
+
+  writeLog("admin", adminUser.username, "APPROVE_BOOKING", "BOOKING", booking.booking_code, { action: "approved" });
+
+  // ส่งอีเมลยืนยันการจองตัวจริง (พร้อมรหัสห้องและ QR Code) ให้ผู้จอง
+  try {
+    sendBookingConfirmationToUser(updated);
+  } catch (mailErr) {
+    Logger.log("ไม่สามารถส่งอีเมลยืนยันการจอง: " + mailErr.message);
+  }
+
+  return updated;
+}
+
+/**
+ * แอดมินปฏิเสธคำขอการจอง (Reject Booking)
+ * @param {string} bookingId
+ * @param {string} reason
+ * @param {Object} adminUser
+ * @returns {Object} updated booking
+ */
+function adminRejectBooking(bookingId, reason, adminUser) {
+  var cleanId = String(bookingId || "").trim();
+  var booking = findRowById("Bookings", "booking_id", cleanId);
+  if (!booking) {
+    throw new Error("ไม่พบข้อมูลการจอง");
+  }
+
+  var rejectReason = reason || "ผู้ดูแลระบบปฏิเสธคำขอการจอง";
+  var now = new Date();
+  var updated = updateRow("Bookings", "booking_id", cleanId, {
+    status: "cancelled",
+    cancelled_at: now,
+    cancel_reason: rejectReason,
+    admin_note: (booking.admin_note ? booking.admin_note + " | " : "") + "ไม่อนุมัติ: " + sanitizeInput(rejectReason),
+    updated_at: now,
+    updated_by: adminUser.username
+  });
+
+  writeLog("admin", adminUser.username, "REJECT_BOOKING", "BOOKING", booking.booking_code, { reason: rejectReason });
+
+  // ส่งอีเมลแจ้งผู้จองว่าคำขอถูกปฏิเสธ
+  try {
+    sendBookingRejectionToUser(updated, rejectReason);
+  } catch (mailErr) {
+    Logger.log("ไม่สามารถส่งอีเมลแจ้งปฏิเสธ: " + mailErr.message);
+  }
+
   return updated;
 }
 

@@ -72,9 +72,9 @@ function isOverlapping(roomId, dateStr, startTime, endTime, excludeBookingId) {
       continue;
     }
 
-    // นับเฉพาะสถานะ booked และ checked_in
+    // นับเฉพาะสถานะ pending_approval, booked และ checked_in
     var status = String(b.status).trim().toLowerCase();
-    if (status !== "booked" && status !== "checked_in") {
+    if (status !== "pending_approval" && status !== "booked" && status !== "checked_in") {
       continue;
     }
 
@@ -296,7 +296,7 @@ function createBooking(rawPayload, context) {
   var userBookingsToday = findRowsByCondition("Bookings", function(row) {
     var bDateStr = formatDateToString(row.booking_date);
     var isSameUser = String(row.full_name).trim().toLowerCase() === payload.full_name.toLowerCase();
-    var activeStatus = (row.status === "booked" || row.status === "checked_in");
+    var activeStatus = (row.status === "pending_approval" || row.status === "booked" || row.status === "checked_in");
     return (bDateStr === payload.booking_date && isSameUser && activeStatus);
   });
 
@@ -331,7 +331,7 @@ function createBooking(rawPayload, context) {
       party_size: payload.party_size,
       purpose: payload.purpose,
       equipment: payload.equipment || "",
-      status: "booked",
+      status: "pending_approval",
       created_at: now,
       checkin_at: "",
       checkout_at: "",
@@ -358,7 +358,8 @@ function createBooking(rawPayload, context) {
         room_id: payload.room_id,
         date: payload.booking_date,
         time: payload.start_time + "-" + payload.end_time,
-        party_size: payload.party_size
+        party_size: payload.party_size,
+        status: "pending_approval"
       },
       context ? context.userAgent : "",
       context ? context.ipHash : ""
@@ -368,12 +369,12 @@ function createBooking(rawPayload, context) {
   }
 
   // ส่งอีเมลแจ้งเตือนภายนอก LockService (Non-blocking)
-  // 1. ส่งอีเมลยืนยันการจองให้ผู้จองก่อนเป็นลำดับแรกสุดเสมอ (Priority #1)
+  // 1. ส่งอีเมลแจ้ง "อยู่ระหว่างรออนุมัติ" ให้ผู้จอง (Priority #1) - ยังไม่ส่งรหัสผ่านห้อง
   if (createdBooking.email) {
     try {
-      sendBookingConfirmationToUser(createdBooking);
+      sendBookingPendingToUser(createdBooking);
     } catch (userMailErr) {
-      Logger.log("ไม่สามารถส่งเมลยืนยันถึงผู้จอง: " + userMailErr.message);
+      Logger.log("ไม่สามารถส่งเมลแจ้งรออนุมัติถึงผู้จอง: " + userMailErr.message);
       try {
         writeLog("system", "Mailer", "USER_MAIL_ERROR", "MAIL", createdBooking.booking_code, userMailErr.message);
       } catch (logErr1) {}
@@ -583,6 +584,9 @@ function lookupBooking(bookingCode, fullName) {
 function checkIn(bookingCode, fullName, context) {
   var booking = lookupBooking(bookingCode, fullName);
   
+  if (booking.status === "pending_approval") {
+    throw new Error("คิวนี้อยู่ระหว่างรอผู้ดูแลระบบอนุมัติ ยังไม่สามารถเช็คอินได้");
+  }
   if (booking.status === "checked_in") {
     throw new Error("คิวนี้ได้ทำการเช็คอินไปแล้วเมื่อ " + booking.checkin_at);
   }
@@ -805,5 +809,140 @@ function resendBookingConfirmation(bookingCode, newEmail) {
     success: true,
     message: "ระบบได้จัดส่งอีเมลยืนยันการจองไปยัง " + targetEmail + " เรียบร้อยแล้ว",
     sent_to: targetEmail
+  };
+}
+
+/**
+ * สร้าง Approval Security Token สำหรับลิงก์อนุมัติในอีเมล
+ * @param {Object} booking
+ * @returns {string} token
+ */
+function generateApprovalToken(booking) {
+  var bId = String(booking.booking_id || "").trim();
+  var bCode = String(booking.booking_code || "").trim();
+  var raw = bId + "_" + bCode + "_wtk_approval_secret";
+  var signature = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw);
+  var tokenStr = "";
+  for (var i = 0; i < signature.length; i++) {
+    var b = signature[i];
+    if (b < 0) b += 256;
+    var hex = b.toString(16);
+    if (hex.length === 1) hex = "0" + hex;
+    tokenStr += hex;
+  }
+  return tokenStr.substring(0, 32);
+}
+
+/**
+ * ตรวจสอบความถูกต้องของ Approval Token
+ */
+function verifyApprovalToken(booking, token) {
+  if (!token) return false;
+  var expected = generateApprovalToken(booking);
+  return expected === String(token).trim();
+}
+
+/**
+ * อนุมัติการจองโดยตรงผ่านลิงก์ 1-Click ในอีเมล
+ * @param {string} bookingId
+ * @param {string} token
+ * @returns {Object} ผลลัพธ์
+ */
+function approveBookingDirect(bookingId, token) {
+  var cleanId = String(bookingId || "").trim();
+  var booking = findRowById("Bookings", "booking_id", cleanId);
+  if (!booking) {
+    throw new Error("ไม่พบข้อมูลการจองในระบบ");
+  }
+
+  if (!verifyApprovalToken(booking, token)) {
+    throw new Error("ลิงก์อนุมัติไม่ถูกต้อง หรือหมดอายุแล้ว");
+  }
+
+  var currentStatus = String(booking.status || "").toLowerCase();
+  if (currentStatus === "booked" || currentStatus === "checked_in" || currentStatus === "checked_out") {
+    return {
+      alreadyProcessed: true,
+      message: "รายการจองนี้ได้รับการอนุมัติเรียบร้อยแล้ว",
+      booking: booking
+    };
+  }
+  if (currentStatus === "cancelled") {
+    throw new Error("รายการจองนี้ถูกยกเลิกไปแล้ว ไม่สามารถอนุมัติได้");
+  }
+
+  var now = new Date();
+  var updated = updateRow("Bookings", "booking_id", cleanId, {
+    status: "booked",
+    updated_at: now,
+    updated_by: "email_approval"
+  });
+
+  writeLog("admin", "email_approval", "APPROVE_BOOKING", "BOOKING", booking.booking_code, { via: "email_1click" });
+
+  // ส่งอีเมลยืนยันการจองตัวจริง (พร้อมรหัสห้องและ QR Code) ให้ผู้จอง
+  try {
+    sendBookingConfirmationToUser(updated);
+  } catch (mailErr) {
+    Logger.log("ส่งเมลยืนยันหลังอนุมัติไม่สำเร็จ: " + mailErr.message);
+  }
+
+  return {
+    success: true,
+    message: "อนุมัติการจองห้องซ้อมดนตรีเรียบร้อยแล้ว",
+    booking: updated
+  };
+}
+
+/**
+ * ปฏิเสธการจองโดยตรงผ่านลิงก์ในอีเมล
+ * @param {string} bookingId
+ * @param {string} token
+ * @param {string} [reason]
+ * @returns {Object} ผลลัพธ์
+ */
+function rejectBookingDirect(bookingId, token, reason) {
+  var cleanId = String(bookingId || "").trim();
+  var booking = findRowById("Bookings", "booking_id", cleanId);
+  if (!booking) {
+    throw new Error("ไม่พบข้อมูลการจองในระบบ");
+  }
+
+  if (!verifyApprovalToken(booking, token)) {
+    throw new Error("ลิงก์ไม่ถูกต้อง หรือหมดอายุแล้ว");
+  }
+
+  var currentStatus = String(booking.status || "").toLowerCase();
+  if (currentStatus === "cancelled") {
+    return {
+      alreadyProcessed: true,
+      message: "รายการจองนี้ถูกยกเลิก/ปฏิเสธเรียบร้อยแล้ว",
+      booking: booking
+    };
+  }
+
+  var rejectReason = reason || "ผู้ดูแลระบบปฏิเสธคำขอการจอง";
+  var now = new Date();
+  var updated = updateRow("Bookings", "booking_id", cleanId, {
+    status: "cancelled",
+    cancelled_at: now,
+    cancel_reason: rejectReason,
+    updated_at: now,
+    updated_by: "email_rejection"
+  });
+
+  writeLog("admin", "email_rejection", "REJECT_BOOKING", "BOOKING", booking.booking_code, { reason: rejectReason, via: "email_1click" });
+
+  // ส่งอีเมลแจ้งผู้จองว่าคำขอถูกปฏิเสธ
+  try {
+    sendBookingRejectionToUser(updated, rejectReason);
+  } catch (mailErr) {
+    Logger.log("ส่งเมลแจ้งปฏิเสธไม่สำเร็จ: " + mailErr.message);
+  }
+
+  return {
+    success: true,
+    message: "ปฏิเสธคำขอการจองเรียบร้อยแล้ว",
+    booking: updated
   };
 }

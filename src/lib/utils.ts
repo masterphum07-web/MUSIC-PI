@@ -70,6 +70,13 @@ export function minutesToTime(totalMinutes: number): string {
  */
 export function getStatusInfo(status: BookingStatus) {
   switch (status) {
+    case 'pending_approval':
+      return {
+        label: 'รอการอนุมัติ',
+        color: '#D97706',
+        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300',
+        dotClass: 'bg-amber-500 animate-pulse',
+      };
     case 'booked':
       return {
         label: 'จองแล้ว',
