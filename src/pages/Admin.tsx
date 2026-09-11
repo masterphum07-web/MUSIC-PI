@@ -35,6 +35,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   onLogout,
 }) => {
   const toast = useToast();
+  const toastRef = React.useRef(toast);
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
+
   const [activeTab, setActiveTab] = useState<
     'overview' | 'reservations' | 'recipients' | 'settings' | 'logs'
   >('overview');
@@ -52,8 +57,21 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isFetchingRef = React.useRef(false);
+  const lastFetchTimeRef = React.useRef(0);
+
   const loadDashboard = useCallback(
     async (isManual = false) => {
+      if (isFetchingRef.current) return;
+
+      const now = Date.now();
+      if (!isManual && now - lastFetchTimeRef.current < 2500) {
+        return;
+      }
+
+      isFetchingRef.current = true;
+      lastFetchTimeRef.current = now;
+
       if (isManual) setIsRefreshing(true);
       else if (!localStorage.getItem('wtk_admin_dashboard_cache')) setIsLoading(true);
       else setIsRefreshing(true);
@@ -66,14 +84,26 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           localStorage.setItem('wtk_admin_dashboard_cache', JSON.stringify(data));
         } catch {}
       } catch (err: any) {
-        setError(err.message || 'ไม่สามารถโหลดข้อมูลสถิติหลังบ้านได้');
-        toast.error('เกิดข้อผิดพลาด', err.message);
+        const msg = err.message || '';
+        // หากเซสชันหมดอายุ ให้เคลียร์ Token และเด้งกลับหน้าล็อกอินทันที ไม่เกิดลูปแจ้งเตือนซ้ำ
+        if (msg.includes('SESSION_EXPIRED') || msg.includes('UNAUTHORIZED')) {
+          localStorage.removeItem('wtk_admin_token');
+          localStorage.removeItem('wtk_admin_user');
+          localStorage.removeItem('wtk_admin_dashboard_cache');
+          toastRef.current.error('เซสชันหมดอายุ', 'เซสชันหมดอายุหรือไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่อีกครั้ง');
+          onLogout();
+          return;
+        }
+
+        setError(msg || 'ไม่สามารถโหลดข้อมูลสถิติหลังบ้านได้');
+        toastRef.current.error('เกิดข้อผิดพลาด', msg);
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
+        isFetchingRef.current = false;
       }
     },
-    [token, toast]
+    [token, onLogout]
   );
 
   useEffect(() => {

@@ -22,6 +22,11 @@ export interface AdminLogsProps {
 
 export const AdminLogs: React.FC<AdminLogsProps> = ({ token }) => {
   const toast = useToast();
+  const toastRef = React.useRef(toast);
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
+
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -46,11 +51,11 @@ export const AdminLogs: React.FC<AdminLogsProps> = ({ token }) => {
       setTotal(res.total || 0);
       setTotalPages(res.total_pages || 1);
     } catch (err: any) {
-      toast.error('โหลดบันทึกระบบไม่สำเร็จ', err.message);
+      toastRef.current.error('โหลดบันทึกระบบไม่สำเร็จ', err.message);
     } finally {
       setIsLoading(false);
     }
-  }, [token, search, actorType, page, toast]);
+  }, [token, search, actorType, page]);
 
   useEffect(() => {
     fetchLogs();

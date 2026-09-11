@@ -31,14 +31,22 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const showToast = useCallback(
     (type: ToastType, title: string, message?: string, duration = 4000) => {
-      const id = Math.random().toString(36).substring(2, 9);
-      setToasts((prev) => [...prev, { id, type, title, message, duration }]);
+      setToasts((prev) => {
+        // ป้องกันแจ้งเตือนซ้ำซ้อน: หากมีข้อความเดียวกันขึ้นอยู่แล้ว ไม่ต้องเพิ่มอีก
+        const isDuplicate = prev.some((t) => t.title === title && t.message === message);
+        if (isDuplicate) return prev;
 
-      if (duration > 0) {
-        setTimeout(() => {
-          removeToast(id);
-        }, duration);
-      }
+        const id = Math.random().toString(36).substring(2, 9);
+        if (duration > 0) {
+          setTimeout(() => {
+            removeToast(id);
+          }, duration);
+        }
+
+        // จำกัดแสดงผลพร้อมกันไม่เกิน 3 ข้อความ เพื่อไม่ให้บดบังหน้าจอ
+        const trimmed = prev.length >= 3 ? prev.slice(prev.length - 2) : prev;
+        return [...trimmed, { id, type, title, message, duration }];
+      });
     },
     [removeToast]
   );
@@ -47,8 +55,13 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const error = useCallback((title: string, message?: string) => showToast('error', title, message, 5000), [showToast]);
   const info = useCallback((title: string, message?: string) => showToast('info', title, message), [showToast]);
 
+  const contextValue = React.useMemo(
+    () => ({ showToast, success, error, info }),
+    [showToast, success, error, info]
+  );
+
   return (
-    <ToastContext.Provider value={{ showToast, success, error, info }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       {/* Toast Render Area */}
       <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0">

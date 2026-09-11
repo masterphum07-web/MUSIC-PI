@@ -24,6 +24,11 @@ export interface AdminReservationsProps {
 
 export const AdminReservations: React.FC<AdminReservationsProps> = ({ token }) => {
   const toast = useToast();
+  const toastRef = React.useRef(toast);
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
+
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -54,11 +59,11 @@ export const AdminReservations: React.FC<AdminReservationsProps> = ({ token }) =
       setTotal(res.total || 0);
       setTotalPages(res.total_pages || 1);
     } catch (err: any) {
-      toast.error('โหลดข้อมูลคิวไม่สำเร็จ', err.message);
+      toastRef.current.error('โหลดข้อมูลคิวไม่สำเร็จ', err.message);
     } finally {
       setIsLoading(false);
     }
-  }, [token, search, statusFilter, dateFilter, page, toast]);
+  }, [token, search, statusFilter, dateFilter, page]);
 
   useEffect(() => {
     fetchBookings();

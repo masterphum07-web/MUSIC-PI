@@ -22,6 +22,11 @@ export interface AdminRecipientsProps {
 
 export const AdminRecipients: React.FC<AdminRecipientsProps> = ({ token }) => {
   const toast = useToast();
+  const toastRef = React.useRef(toast);
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
+
   const [recipients, setRecipients] = useState<NotifyRecipient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -43,11 +48,11 @@ export const AdminRecipients: React.FC<AdminRecipientsProps> = ({ token }) => {
       const list = await adminCrudRecipients(token, 'list');
       setRecipients(list || []);
     } catch (err: any) {
-      toast.error('โหลดรายชื่ออีเมลไม่สำเร็จ', err.message);
+      toastRef.current.error('โหลดรายชื่ออีเมลไม่สำเร็จ', err.message);
     } finally {
       setIsLoading(false);
     }
-  }, [token, toast]);
+  }, [token]);
 
   useEffect(() => {
     fetchRecipients();
