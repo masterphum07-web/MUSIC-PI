@@ -7,7 +7,7 @@ const rootDir = path.resolve(__dirname, '..');
 
 function run(cmd) {
   console.log(`> ${cmd}`);
-  execSync(cmd, { stdio: 'inherit', cwd: rootDir, shell: true });
+  execSync(cmd, { stdio: 'inherit', cwd: rootDir, shell: 'powershell.exe' });
 }
 
 async function main() {
@@ -54,7 +54,7 @@ async function main() {
     } catch (e) {
       console.log('Nothing new to commit on gh-pages');
     }
-    run('git push origin gh-pages');
+    run('git push --force origin gh-pages');
     console.log('Successfully pushed to gh-pages branch!');
   } finally {
     // 8. Return to main branch
