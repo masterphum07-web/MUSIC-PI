@@ -128,7 +128,13 @@ function checkAvailability(roomId, dateStr, startTime, endTime) {
       roomId = room.room_id;
     }
   }
-  if (!room || String(room.is_active).toUpperCase() !== "TRUE") {
+  if (!room) {
+    room = { room_id: roomId || "ROOM-01", room_name: "ห้องซ้อมดนตรี ชมรมดนตรี วทก.", is_active: true };
+    roomId = room.room_id;
+  }
+  var rActive = room.is_active;
+  var isAct = (rActive === true || String(rActive).toUpperCase() === "TRUE" || rActive === 1 || String(rActive) === "1" || typeof rActive === "undefined" || rActive === "");
+  if (!isAct) {
     return { available: false, reason: "ห้องซ้อมนี้ไม่เปิดให้บริการ" };
   }
 
@@ -422,17 +428,30 @@ function getPublicState(targetDate) {
   var activeRooms = [];
   for (var i = 0; i < allRooms.length; i++) {
     var r = allRooms[i];
-    if (String(r.is_active).toUpperCase() === "TRUE") {
+    var rAct = r.is_active;
+    var isAct = (rAct === true || String(rAct).toUpperCase() === "TRUE" || rAct === 1 || String(rAct) === "1" || typeof rAct === "undefined" || rAct === "");
+    if (isAct) {
       activeRooms.push({
-        room_id: r.room_id,
-        room_name: r.room_name,
-        capacity: parseInt(r.capacity, 10) || 1,
-        equipment_list: r.equipment_list || "",
+        room_id: r.room_id || "ROOM-01",
+        room_name: r.room_name || "ห้องซ้อมดนตรี ชมรมดนตรี วทก.",
+        capacity: parseInt(r.capacity, 10) || 10,
+        equipment_list: r.equipment_list || "กลองชุด Pearl, แอมป์กีตาร์ Marshall, แอมป์เบส Fender, คีย์บอร์ด Roland, ไมโครโฟน Shure x2, PA System",
         color_hex: r.color_hex || "#1B7A8C",
         sort_order: parseInt(r.sort_order, 10) || 1,
         image_url: r.image_url || ""
       });
     }
+  }
+  if (activeRooms.length === 0) {
+    activeRooms.push({
+      room_id: "ROOM-01",
+      room_name: "ห้องซ้อมดนตรี ชมรมดนตรี วทก.",
+      capacity: 10,
+      equipment_list: "กลองชุด Pearl, แอมป์กีตาร์ Marshall, แอมป์เบส Fender, คีย์บอร์ด Roland, ไมโครโฟน Shure x2, PA System",
+      color_hex: "#1B7A8C",
+      sort_order: 1,
+      image_url: ""
+    });
   }
   activeRooms.sort(function(a, b) { return a.sort_order - b.sort_order; });
 

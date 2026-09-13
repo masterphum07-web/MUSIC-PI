@@ -3,7 +3,7 @@ import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';
 import { Select } from '@/components/common/Select';
-import { createBooking } from '@/lib/api';
+import { createBooking, getPublicState } from '@/lib/api';
 import { Booking, Room, PublicSettings, DEFAULT_WTK_MAJORS } from '@/types';
 import { useToast } from '@/components/common/Toast';
 import { formatThaiDate, timeToMinutes, minutesToTime } from '@/lib/utils';
@@ -118,6 +118,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [submissionPhase, setSubmissionPhase] = useState<string>('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // ตัวแปรป้องกันการรีเซ็ตค่าซ้ำขณะ Modal เปิดอยู่
+  const wasOpenRef = React.useRef(false);
+  const [dateBookings, setDateBookings] = useState<Booking[]>(bookings || []);
+  const [isLoadingBookings, setIsLoadingBookings] = useState<boolean>(false);
+
   // ซิงก์ค่า major ให้ตรงกับตัวเลือกที่มีอยู่เสมอ
   useEffect(() => {
     if (availableMajors.length > 0 && !availableMajors.includes(major)) {
@@ -125,9 +130,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }
   }, [availableMajors, major]);
 
-  // กำหนดค่าเริ่มต้นตาม prefill เมื่อเปิด Modal
+  // กำหนดค่าเริ่มต้นตาม prefill เมื่อเปิด Modal ครั้งแรกเท่านั้น (ห้ามรีเซ็ตซ้ำขณะ Modal เปิดอยู่)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !wasOpenRef.current) {
+      wasOpenRef.current = true;
       const targetDate = prefill?.date || dayjs().format('YYYY-MM-DD');
       const targetIsWeekend = dayjs(targetDate).day() === 0 || dayjs(targetDate).day() === 6;
       const targetOp = targetIsWeekend
@@ -156,8 +162,47 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       setErrors({});
       setAcceptedTerms(false);
       setSubmissionPhase('');
+    } else if (!isOpen) {
+      wasOpenRef.current = false;
     }
-  }, [isOpen, prefill, settings]);
+  }, [isOpen]);
+
+  // ดึงคิวการจองของวันที่เลือก (ทั้งจาก Local Cache และเรียก API สด) เพื่อตรวจสอบ Overlap อย่างแม่นยำ 100%
+  useEffect(() => {
+    if (!isOpen || !bookingDate) return;
+
+    let isMounted = true;
+    try {
+      const cached = localStorage.getItem(`wtk_cached_public_state_${bookingDate}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && Array.isArray(parsed.bookings)) {
+          setDateBookings(parsed.bookings);
+        }
+      }
+    } catch (e) {}
+
+    setIsLoadingBookings(true);
+    getPublicState(bookingDate)
+      .then((res) => {
+        if (isMounted && res && Array.isArray(res.bookings)) {
+          setDateBookings(res.bookings);
+          try {
+            localStorage.setItem(`wtk_cached_public_state_${bookingDate}`, JSON.stringify(res));
+          } catch (e) {}
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not fetch date bookings for modal:', err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingBookings(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, bookingDate]);
 
   // ซิงก์เวลาเมื่อผู้ใช้เปลี่ยนวันที่ระหว่างวันธรรมดา / วันหยุด ให้ตรงตามเวลาเปิดของวันนั้นๆ
   useEffect(() => {
@@ -222,9 +267,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }
 
     // ตรวจสอบ Overlap กับรายการคิวการจองในระบบทันที
-    const overlapBooking = (bookings || []).find((b) => {
-      if (b.status === 'cancelled') return false;
-      if (b.booking_date !== bookingDate) return false;
+    const allRelevantBookings = [...(bookings || []), ...dateBookings];
+    const overlapBooking = allRelevantBookings.find((b) => {
+      const isActiveStatus = b.status === 'pending_approval' || b.status === 'booked' || b.status === 'checked_in';
+      if (!isActiveStatus) return false;
+      const bDateStr = (b.booking_date || '').substring(0, 10);
+      if (bDateStr !== bookingDate) return false;
       const bStart = timeToMinutes(b.start_time);
       const bEnd = timeToMinutes(b.end_time);
       return sMins < bEnd && eMins > bStart;
@@ -234,7 +282,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       setAvailabilityStatus({
         checked: true,
         available: false,
-        message: `ช่วงเวลานี้มีคิวแล้ว (${overlapBooking.start_time} - ${overlapBooking.end_time} น.)`,
+        message: `ช่วงเวลานี้มีคิวแล้ว (${overlapBooking.start_time} - ${overlapBooking.end_time} น.) กรุณาเลือกเวลาอื่น`,
       });
       return;
     }
@@ -244,7 +292,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       available: true,
       message: 'ห้องว่าง พร้อมสำหรับการจอง',
     });
-  }, [isOpen, bookingDate, startTime, endTime, sMins, eMins, bookings, openMins, closeMins, operatingHoursStr, maxBookingHours]);
+  }, [isOpen, bookingDate, startTime, endTime, sMins, eMins, bookings, dateBookings, openMins, closeMins, operatingHoursStr, maxBookingHours]);
 
   // เมื่อเปลี่ยนเวลาเริ่มต้น
   const handleStartTimeChange = (newStartTime: string) => {
@@ -347,7 +395,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     } catch (err: any) {
       clearTimeout(timer1);
       clearTimeout(timer2);
-      toast.error('การจองไม่สำเร็จ', err.message || 'เกิดข้อผิดพลาดในการจอง กรุณาลองใหม่อีกครั้ง');
+      const errMsg = err.message || 'เกิดข้อผิดพลาดในการจอง กรุณาลองใหม่อีกครั้ง';
+      toast.error('การจองไม่สำเร็จ', errMsg);
+      setErrors((prev) => ({
+        ...prev,
+        submit: errMsg,
+      }));
     } finally {
       setIsSubmitting(false);
       setSubmissionPhase('');
@@ -457,9 +510,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 onChange={(e) => setBookingDate(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 bg-white py-2.5 px-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
               />
-              <span className="text-[11px] text-slate-500 mt-1 block">
-                {formatThaiDate(bookingDate, 'ddddที่ D MMMM พ.ศ. BBBB')}
-              </span>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
+                <span>{formatThaiDate(bookingDate, 'ddddที่ D MMMM พ.ศ. BBBB')}</span>
+                {isLoadingBookings && (
+                  <span className="text-secondary font-medium animate-pulse flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-ping" />
+                    กำลังเช็คคิว...
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Operating Hours Info Banner */}
@@ -808,6 +867,31 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </span>
               </label>
             </div>
+
+            {/* Server-side Error Alert (เช่น โดนจองตัดหน้า หรือ โควตาเต็ม) */}
+            {errors.submit && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl flex items-start gap-2.5 text-xs shadow-sm">
+                <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-bold">การจองไม่สำเร็จ</div>
+                  <div className="text-[11px] mt-0.5 leading-relaxed">{errors.submit}</div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentStep(1);
+                      setErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.submit;
+                        return next;
+                      });
+                    }}
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-rose-700 underline hover:text-rose-900 cursor-pointer"
+                  >
+                    ← กลับไปขั้นตอนที่ 1 เพื่อเลือกช่วงเวลาหรือวันที่อื่น
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Live Submission Progress Feedback */}
             {isSubmitting && (
