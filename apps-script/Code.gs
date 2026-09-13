@@ -1,8 +1,17 @@
 /**
  * ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
  * BUNDLED CODE.GS - รวมทุกโมดูลสำหรับ Google Apps Script
- * อัปเดตล่าสุด: 2026-09-13T14:49:56.645Z
+ * อัปเดตล่าสุด: 2026-09-13T14:53:23.991Z
+ * 
+ * ⚠️ คำเตือนสำคัญสำหรับผู้ดูแลระบบ:
+ * ระบบนี้ทำงานเป็น Web App API อัตโนมัติร่วมกับเว็บไซต์หน้าบ้าน
+ * ไม่ต้องกดปุ่ม 'เรียกใช้' (Run / Play) ในหน้านี้เด็ดขาด!
+ * หากต้องการอัปเดตโค้ด ให้กดเฉพาะ 'การทำให้ใช้งานได้' (Deploy) > 'จัดการการทำให้ใช้งานได้' (Manage deployments) เท่านั้น
  */
+
+function DO_NOT_RUN_ANYTHING_HERE() {
+  Logger.log('✅ ระบบทำงานเป็น Web App API ตามปกติ ไม่จำเป็นต้องกดปุ่มเรียกใช้ในหน้านี้ครับ');
+}
 
 /* ============================================================================== */
 /* ไฟล์: 00_Setup.gs */
@@ -35,6 +44,25 @@ var THEME = {
 function setupSpreadsheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   
+  // 🛡️ ระบบป้องกันความปลอดภัยสูงสุด (Safety Lock):
+  // หากมีชีต Settings หรือ Bookings หรือ NotifyRecipients อยู่แล้ว และมีข้อมูลมากกว่า 1 แถว ห้ามล้างเด็ดขาด!
+  var existingSettings = ss.getSheetByName("Settings");
+  var existingBookings = ss.getSheetByName("Bookings");
+  var existingRecipients = ss.getSheetByName("NotifyRecipients");
+  var hasExistingData = (existingSettings && existingSettings.getLastRow() > 1) ||
+                        (existingBookings && existingBookings.getLastRow() > 1) ||
+                        (existingRecipients && existingRecipients.getLastRow() > 1);
+
+  if (hasExistingData) {
+    var warnMsg = "⛔ ระงับการทำงานเพื่อความปลอดภัย (Safety Lock Activated):\n" +
+                  "ระบบตรวจพบว่า Google Sheets มีข้อมูลเดิมอยู่แล้ว จึงไม่อนุญาตให้รัน setupSpreadsheet ซ้ำ เพื่อป้องกันข้อมูลการจอง รายชื่ออีเมล และการตั้งค่าสูญหายโดยเด็ดขาด!";
+    Logger.log(warnMsg);
+    try {
+      SpreadsheetApp.getUi().alert("⛔ คำเตือนความปลอดภัย", warnMsg, SpreadsheetApp.getUi().ButtonSet.OK);
+    } catch (e) {}
+    return "⛔ ไม่สามารถรันซ้ำได้เนื่องจากมีข้อมูลเดิมอยู่แล้ว";
+  }
+
   Logger.log(">>> เริ่มต้นการตั้งค่าระบบจองห้องซ้อมดนตรี วทก. <<<");
 
   // 1. กำหนดนิยามของทั้ง 7 แท็บ

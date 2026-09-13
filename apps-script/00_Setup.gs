@@ -25,6 +25,25 @@ var THEME = {
 function setupSpreadsheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   
+  // 🛡️ ระบบป้องกันความปลอดภัยสูงสุด (Safety Lock):
+  // หากมีชีต Settings หรือ Bookings หรือ NotifyRecipients อยู่แล้ว และมีข้อมูลมากกว่า 1 แถว ห้ามล้างเด็ดขาด!
+  var existingSettings = ss.getSheetByName("Settings");
+  var existingBookings = ss.getSheetByName("Bookings");
+  var existingRecipients = ss.getSheetByName("NotifyRecipients");
+  var hasExistingData = (existingSettings && existingSettings.getLastRow() > 1) ||
+                        (existingBookings && existingBookings.getLastRow() > 1) ||
+                        (existingRecipients && existingRecipients.getLastRow() > 1);
+
+  if (hasExistingData) {
+    var warnMsg = "⛔ ระงับการทำงานเพื่อความปลอดภัย (Safety Lock Activated):\n" +
+                  "ระบบตรวจพบว่า Google Sheets มีข้อมูลเดิมอยู่แล้ว จึงไม่อนุญาตให้รัน setupSpreadsheet ซ้ำ เพื่อป้องกันข้อมูลการจอง รายชื่ออีเมล และการตั้งค่าสูญหายโดยเด็ดขาด!";
+    Logger.log(warnMsg);
+    try {
+      SpreadsheetApp.getUi().alert("⛔ คำเตือนความปลอดภัย", warnMsg, SpreadsheetApp.getUi().ButtonSet.OK);
+    } catch (e) {}
+    return "⛔ ไม่สามารถรันซ้ำได้เนื่องจากมีข้อมูลเดิมอยู่แล้ว";
+  }
+
   Logger.log(">>> เริ่มต้นการตั้งค่าระบบจองห้องซ้อมดนตรี วทก. <<<");
 
   // 1. กำหนดนิยามของทั้ง 7 แท็บ

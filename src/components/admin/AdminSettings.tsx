@@ -117,6 +117,23 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [hasLocalBackup, setHasLocalBackup] = useState(false);
+
+  // ตรวจสอบข้อมูลสำรองใน LocalStorage
+  const checkLocalBackup = (currentMajors: string[]) => {
+    try {
+      const backup = localStorage.getItem('wtk_custom_majors_backup');
+      if (backup) {
+        const parsed = JSON.parse(backup);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const isDifferent = JSON.stringify(parsed) !== JSON.stringify(currentMajors);
+          setHasLocalBackup(isDifferent);
+          return;
+        }
+      }
+    } catch {}
+    setHasLocalBackup(false);
+  };
 
   // โหลดการตั้งค่าล่าสุดจาก Google Sheets (Settings) ทันทีที่เปิดหน้า
   useEffect(() => {
@@ -142,21 +159,30 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
         if (data.footer_copyright !== undefined) setFooterCopyright(data.footer_copyright);
         if (data.footer_tagline !== undefined) setFooterTagline(data.footer_tagline);
 
+        let activeLoadedMajors: string[] | null = null;
         if (data.majors_list) {
           try {
             const parsed = typeof data.majors_list === 'string' ? JSON.parse(data.majors_list) : data.majors_list;
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setMajors(parsed);
+              activeLoadedMajors = parsed;
             }
           } catch {
             const parts = String(data.majors_list).split(',').map((s: string) => s.trim()).filter(Boolean);
-            if (parts.length > 0) setMajors(parts);
+            if (parts.length > 0) activeLoadedMajors = parts;
           }
         } else if (Array.isArray(data.majors) && data.majors.length > 0) {
-          setMajors(data.majors);
+          activeLoadedMajors = data.majors;
+        }
+
+        if (activeLoadedMajors) {
+          setMajors(activeLoadedMajors);
+          checkLocalBackup(activeLoadedMajors);
+        } else {
+          checkLocalBackup(majors);
         }
       } catch (err: any) {
         toast.error('โหลดการตั้งค่าไม่สำเร็จ', err.message || 'ไม่สามารถดึงข้อมูลจากระบบได้');
+        checkLocalBackup(majors);
       } finally {
         if (isMounted) setIsFetching(false);
       }
@@ -263,6 +289,25 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     toast.success('รีเซ็ตสำเร็จ', 'คืนค่าหลักสูตรมาตรฐานของ วทก. เรียบร้อย (อย่าลืมกดบันทึก)');
   };
 
+  // กู้คืนหลักสูตรจากข้อมูลสำรองในเบราว์เซอร์
+  const handleRestoreLocalBackup = () => {
+    try {
+      const backup = localStorage.getItem('wtk_custom_majors_backup');
+      if (backup) {
+        const parsed = JSON.parse(backup);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMajors(parsed);
+          setEditingIndex(null);
+          setEditingValue('');
+          setHasLocalBackup(false);
+          toast.success('กู้คืนสำเร็จ', `นำหลักสูตรสำรอง (${parsed.length} รายการ) กลับมาแล้ว (กรุณากดบันทึกการตั้งค่า)`);
+          return;
+        }
+      }
+    } catch {}
+    toast.error('ไม่พบข้อมูลสำรอง', 'ไม่มีข้อมูลหลักสูตรที่เคยบันทึกไว้ในเครื่องนี้');
+  };
+
   // รีเซ็ตเนื้อหาส่วนท้ายเว็บเป็นค่าเริ่มต้นมาตรฐาน
   const handleResetFooter = () => {
     const confirmed = window.confirm('ต้องการคืนค่าข้อความส่วนท้ายเว็บกลับเป็นค่าเริ่มต้นมาตรฐานใช่หรือไม่?');
@@ -298,6 +343,12 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
         footer_tagline: footerTagline,
       });
 
+      // สำรองข้อมูลหลักสูตรไว้ในเครื่องเสมอ
+      try {
+        localStorage.setItem('wtk_custom_majors_backup', JSON.stringify(majors));
+        setHasLocalBackup(false);
+      } catch {}
+
       toast.success('บันทึกการตั้งค่าสำเร็จ', 'ระบบได้อัปเดตการตั้งค่าส่วนกลางและส่วนท้ายเว็บเรียบร้อย');
       if (onSettingsSaved) onSettingsSaved();
     } catch (err: any) {
@@ -332,6 +383,17 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
             </p>
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+            {hasLocalBackup && (
+              <button
+                type="button"
+                onClick={handleRestoreLocalBackup}
+                className="inline-flex items-center gap-1.5 text-xs text-amber-700 hover:text-amber-800 py-1.5 px-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 transition-colors font-medium shadow-sm"
+                title="พบรายการหลักสูตรเดิมที่เคยบันทึกไว้ในเบราว์เซอร์นี้ สามารถกดเพื่อกู้คืนได้ทันที"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                <span>📦 กู้คืนหลักสูตรเดิม</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={handleResetMajors}
