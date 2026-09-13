@@ -67,7 +67,24 @@ export interface PublicSettings {
   announcement_text?: string;
   contact_info?: string;
   majors?: string[];
+  rules_title?: string;
+  rules_text?: string;
+  contact_title?: string;
+  contact_location?: string;
+  footer_copyright?: string;
+  footer_tagline?: string;
 }
+
+// ค่าเริ่มต้นสำหรับส่วนท้ายเว็บ (Footer Defaults)
+export const DEFAULT_RULES_TITLE = 'ระเบียบและข้อปฏิบัติการใช้ห้องซ้อมดนตรี ชมรมดนตรี วทก.';
+export const DEFAULT_RULES_TEXT = `การเช็คอิน: กรุณากดเช็คอินหน้าเว็บตั้งแต่ก่อนเริ่มเวลา 15 นาที จนถึงไม่เกิน 30 นาทีหลังเวลาเริ่ม (หากไม่เช็คอิน ระบบจะตัดสิทธิ์ No-show และปล่อยห้องให้ผู้อื่นทันที)
+การดูแลอุปกรณ์: ห้ามนำอาหารและเครื่องดื่ม (ยกเว้นน้ำเปล่ามีฝาปิด) เข้าในห้องซ้อม ปรับแอมป์และเสียงดนตรีในระดับที่เหมาะสม
+การตรงต่อเวลา: ซ้อมเสร็จกรุณากดเช็คเอาต์หน้าเว็บทันที และออกจากห้องตรงเวลา เพื่อความสะดวกของคิวถัดไป
+ความปลอดภัย: ปิดสวิตช์เครื่องใช้ไฟฟ้า แอมป์ และเครื่องปรับอากาศทุกครั้งก่อนออกจากห้อง`;
+export const DEFAULT_CONTACT_TITLE = 'ติดต่อและสอบถามข้อมูล';
+export const DEFAULT_CONTACT_LOCATION = 'ชมรมดนตรี อาคารกิจกรรมนักศึกษา ชั้น 2 วทก.';
+export const DEFAULT_FOOTER_COPYRIGHT = 'ชมรมดนตรี วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก (วทก.)';
+export const DEFAULT_FOOTER_TAGLINE = 'พัฒนาเพื่อส่งเสริมกิจกรรมนักศึกษา';
 
 // รายชื่อหลักสูตรและสาขาวิชาที่เป็นทางการของ วทก. (ค่าเริ่มต้นมาตรฐาน)
 export const DEFAULT_WTK_MAJORS: string[] = [

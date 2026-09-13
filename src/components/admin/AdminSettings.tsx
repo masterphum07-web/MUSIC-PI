@@ -19,8 +19,20 @@ import {
   ArrowDown,
   RotateCcw,
   Loader2,
+  ShieldCheck,
+  MapPin,
+  AlignLeft,
+  Info,
 } from 'lucide-react';
-import { DEFAULT_WTK_MAJORS } from '@/types';
+import {
+  DEFAULT_WTK_MAJORS,
+  DEFAULT_RULES_TITLE,
+  DEFAULT_RULES_TEXT,
+  DEFAULT_CONTACT_TITLE,
+  DEFAULT_CONTACT_LOCATION,
+  DEFAULT_FOOTER_COPYRIGHT,
+  DEFAULT_FOOTER_TAGLINE,
+} from '@/types';
 
 export interface AdminSettingsProps {
   token: string;
@@ -63,6 +75,26 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
       'ชมรมดนตรี วทก. อาคารกิจกรรมนักศึกษา ชั้น 2 โทร: 02-xxx-xxxx'
   );
 
+  // การตั้งค่าส่วนท้ายเว็บ (Footer Settings)
+  const [rulesTitle, setRulesTitle] = useState(
+    initialSettings?.rules_title || DEFAULT_RULES_TITLE
+  );
+  const [rulesText, setRulesText] = useState(
+    initialSettings?.rules_text || DEFAULT_RULES_TEXT
+  );
+  const [contactTitle, setContactTitle] = useState(
+    initialSettings?.contact_title || DEFAULT_CONTACT_TITLE
+  );
+  const [contactLocation, setContactLocation] = useState(
+    initialSettings?.contact_location || DEFAULT_CONTACT_LOCATION
+  );
+  const [footerCopyright, setFooterCopyright] = useState(
+    initialSettings?.footer_copyright || DEFAULT_FOOTER_COPYRIGHT
+  );
+  const [footerTagline, setFooterTagline] = useState(
+    initialSettings?.footer_tagline || DEFAULT_FOOTER_TAGLINE
+  );
+
   // รายการหลักสูตร / สาขาวิชา
   const [majors, setMajors] = useState<string[]>(() => {
     if (initialSettings?.majors_list) {
@@ -103,6 +135,12 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
         if (data.announcement_text !== undefined) setAnnouncement(data.announcement_text);
         if (data.system_status) setSystemStatus(data.system_status);
         if (data.contact_info !== undefined) setContactInfo(data.contact_info);
+        if (data.rules_title !== undefined) setRulesTitle(data.rules_title);
+        if (data.rules_text !== undefined) setRulesText(data.rules_text);
+        if (data.contact_title !== undefined) setContactTitle(data.contact_title);
+        if (data.contact_location !== undefined) setContactLocation(data.contact_location);
+        if (data.footer_copyright !== undefined) setFooterCopyright(data.footer_copyright);
+        if (data.footer_tagline !== undefined) setFooterTagline(data.footer_tagline);
 
         if (data.majors_list) {
           try {
@@ -225,6 +263,19 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     toast.success('รีเซ็ตสำเร็จ', 'คืนค่าหลักสูตรมาตรฐานของ วทก. เรียบร้อย (อย่าลืมกดบันทึก)');
   };
 
+  // รีเซ็ตเนื้อหาส่วนท้ายเว็บเป็นค่าเริ่มต้นมาตรฐาน
+  const handleResetFooter = () => {
+    const confirmed = window.confirm('ต้องการคืนค่าข้อความส่วนท้ายเว็บกลับเป็นค่าเริ่มต้นมาตรฐานใช่หรือไม่?');
+    if (!confirmed) return;
+    setRulesTitle(DEFAULT_RULES_TITLE);
+    setRulesText(DEFAULT_RULES_TEXT);
+    setContactTitle(DEFAULT_CONTACT_TITLE);
+    setContactLocation(DEFAULT_CONTACT_LOCATION);
+    setFooterCopyright(DEFAULT_FOOTER_COPYRIGHT);
+    setFooterTagline(DEFAULT_FOOTER_TAGLINE);
+    toast.success('รีเซ็ตสำเร็จ', 'คืนค่าข้อความส่วนท้ายเว็บมาตรฐานเรียบร้อย (อย่าลืมกดบันทึกการตั้งค่า)');
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -239,9 +290,15 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
         system_status: systemStatus,
         contact_info: contactInfo,
         majors_list: JSON.stringify(majors),
+        rules_title: rulesTitle,
+        rules_text: rulesText,
+        contact_title: contactTitle,
+        contact_location: contactLocation,
+        footer_copyright: footerCopyright,
+        footer_tagline: footerTagline,
       });
 
-      toast.success('บันทึกการตั้งค่าสำเร็จ', 'ระบบได้อัปเดตการตั้งค่าส่วนกลางและหลักสูตรเรียบร้อย');
+      toast.success('บันทึกการตั้งค่าสำเร็จ', 'ระบบได้อัปเดตการตั้งค่าส่วนกลางและส่วนท้ายเว็บเรียบร้อย');
       if (onSettingsSaved) onSettingsSaved();
     } catch (err: any) {
       toast.error('บันทึกไม่สำเร็จ', err.message);
@@ -543,6 +600,110 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               placeholder="ที่ตั้งชมรม, เบอร์โทรศัพท์, เพจ Facebook"
             />
           </div>
+        </div>
+      </div>
+
+      {/* 4. Footer & Rules Customization */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-gold" />
+            <span>4. ปรับแต่งเนื้อหาส่วนท้ายเว็บไซต์และระเบียบการใช้ห้อง (Footer Settings)</span>
+          </h3>
+          <button
+            type="button"
+            onClick={handleResetFooter}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-primary transition-colors self-start sm:self-auto"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>คืนค่าเริ่มต้นส่วนท้ายเว็บ</span>
+          </button>
+        </div>
+
+        <p className="text-xs text-slate-500">
+          สามารถแก้ไขข้อความทุกจุดที่ปรากฏในส่วนล่างสุดของเว็บไซต์ (Footer) ได้อิสระตามต้องการ
+        </p>
+
+        {/* 4.1 ฝั่งซ้าย: ระเบียบและข้อปฏิบัติ */}
+        <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/70 space-y-3">
+          <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <AlignLeft className="w-3.5 h-3.5 text-gold" />
+            <span>ฝั่งซ้าย: ระเบียบและข้อปฏิบัติการใช้ห้อง</span>
+          </h4>
+
+          <Input
+            label="หัวข้อระเบียบและข้อปฏิบัติ"
+            value={rulesTitle}
+            onChange={(e) => setRulesTitle(e.target.value)}
+            placeholder="ระเบียบและข้อปฏิบัติการใช้ห้องซ้อมดนตรี ชมรมดนตรี วทก."
+          />
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              รายการระเบียบและข้อปฏิบัติ (พิมพ์ 1 ข้อต่อ 1 บรรทัด)
+            </label>
+            <textarea
+              rows={6}
+              value={rulesText}
+              onChange={(e) => setRulesText(e.target.value)}
+              placeholder="การเช็คอิน: กรุณากดเช็คอินหน้าเว็บตั้งแต่ก่อนเริ่มเวลา 15 นาที..."
+              className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs leading-relaxed focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            <p className="mt-1 text-[11px] text-slate-400">
+              💡 เคล็ดลับ: หากใส่เครื่องหมายโคลอน (:) เช่น <strong>การเช็คอิน:</strong> หรือ <strong>ความปลอดภัย:</strong> ระบบจะทำตัวหนาหัวข้อด้านหน้าให้อัตโนมัติ
+            </p>
+          </div>
+        </div>
+
+        {/* 4.2 ฝั่งขวา: ข้อมูลติดต่อและสถานที่ */}
+        <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/70 space-y-3">
+          <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-secondary" />
+            <span>ฝั่งขวา: ข้อมูลติดต่อและสถานที่</span>
+          </h4>
+
+          <Input
+            label="หัวข้อข้อมูลติดต่อ"
+            value={contactTitle}
+            onChange={(e) => setContactTitle(e.target.value)}
+            placeholder="ติดต่อและสอบถามข้อมูล"
+          />
+
+          <Input
+            label="สถานที่ตั้งชมรม / ห้องซ้อม"
+            value={contactLocation}
+            onChange={(e) => setContactLocation(e.target.value)}
+            placeholder="ชมรมดนตรี อาคารกิจกรรมนักศึกษา ชั้น 2 วทก."
+          />
+
+          <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl text-[11px] text-blue-800 flex items-center gap-2">
+            <Clock className="w-4 h-4 flex-shrink-0 text-blue-600" />
+            <span>
+              <strong>เวลาทำการ:</strong> ระบบจะแสดงเวลาเปิด-ปิดตามที่กำหนดไว้ในข้อ 2 อัตโนมัติ (ปัจจุบัน: จันทร์-ศุกร์ {weekdayHours} น. | เสาร์-อาทิตย์ {weekendHours} น.)
+            </span>
+          </div>
+        </div>
+
+        {/* 4.3 แถบล่างสุด: ลิขสิทธิ์และสโลแกน */}
+        <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/70 space-y-3">
+          <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <Info className="w-3.5 h-3.5 text-slate-500" />
+            <span>แถบล่างสุด: ข้อความลิขสิทธิ์และสโลแกน (Copyright Bar)</span>
+          </h4>
+
+          <Input
+            label="ข้อความลิขสิทธิ์ (จะแสดงต่อจาก © และปี ค.ศ. ปัจจุบัน)"
+            value={footerCopyright}
+            onChange={(e) => setFooterCopyright(e.target.value)}
+            placeholder="ชมรมดนตรี วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก (วทก.)"
+          />
+
+          <Input
+            label="สโลแกน / ข้อความสนับสนุน (มุมขวาล่าง)"
+            value={footerTagline}
+            onChange={(e) => setFooterTagline(e.target.value)}
+            placeholder="พัฒนาเพื่อส่งเสริมกิจกรรมนักศึกษา"
+          />
         </div>
       </div>
 

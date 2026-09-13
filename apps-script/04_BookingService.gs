@@ -516,7 +516,13 @@ function getPublicState(targetDate) {
     system_status: settings.system_status || "open",
     announcement_text: settings.announcement_text || "",
     contact_info: settings.contact_info || "",
-    majors: activeMajors
+    majors: activeMajors,
+    rules_title: settings.rules_title || "ระเบียบและข้อปฏิบัติการใช้ห้องซ้อมดนตรี ชมรมดนตรี วทก.",
+    rules_text: settings.rules_text || "การเช็คอิน: กรุณากดเช็คอินหน้าเว็บตั้งแต่ก่อนเริ่มเวลา 15 นาที จนถึงไม่เกิน 30 นาทีหลังเวลาเริ่ม (หากไม่เช็คอิน ระบบจะตัดสิทธิ์ No-show และปล่อยห้องให้ผู้อื่นทันที)\nการดูแลอุปกรณ์: ห้ามนำอาหารและเครื่องดื่ม (ยกเว้นน้ำเปล่ามีฝาปิด) เข้าในห้องซ้อม ปรับแอมป์และเสียงดนตรีในระดับที่เหมาะสม\nการตรงต่อเวลา: ซ้อมเสร็จกรุณากดเช็คเอาต์หน้าเว็บทันที และออกจากห้องตรงเวลา เพื่อความสะดวกของคิวถัดไป\nความปลอดภัย: ปิดสวิตช์เครื่องใช้ไฟฟ้า แอมป์ และเครื่องปรับอากาศทุกครั้งก่อนออกจากห้อง",
+    contact_title: settings.contact_title || "ติดต่อและสอบถามข้อมูล",
+    contact_location: settings.contact_location || "ชมรมดนตรี อาคารกิจกรรมนักศึกษา ชั้น 2 วทก.",
+    footer_copyright: settings.footer_copyright || "ชมรมดนตรี วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก (วทก.)",
+    footer_tagline: settings.footer_tagline || "พัฒนาเพื่อส่งเสริมกิจกรรมนักศึกษา"
   };
 
   // 6. คำนวณสรุปสถานะความว่างรายวัน (calendar_summary) สำหรับแสดงผลในปฏิทิน

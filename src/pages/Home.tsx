@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getPublicState } from '@/lib/api';
-import { PublicState, Booking } from '@/types';
+import {
+  PublicState,
+  Booking,
+  DEFAULT_RULES_TITLE,
+  DEFAULT_RULES_TEXT,
+  DEFAULT_CONTACT_TITLE,
+  DEFAULT_CONTACT_LOCATION,
+  DEFAULT_FOOTER_COPYRIGHT,
+  DEFAULT_FOOTER_TAGLINE,
+} from '@/types';
 import { AppHeader } from '@/components/dashboard/AppHeader';
 import { AnnouncementBar } from '@/components/dashboard/AnnouncementBar';
 import { DateStrip } from '@/components/dashboard/DateStrip';
@@ -46,6 +55,12 @@ const DEFAULT_INITIAL_STATE: PublicState = {
     system_status: 'open',
     announcement_text: 'ยินดีต้อนรับสู่ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก. เปิดให้บริการ จันทร์-ศุกร์ 16:30 - 20:00 น. และ เสาร์-อาทิตย์ 09:00 - 20:00 น.',
     contact_info: 'ชมรมดนตรี วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก (วทก.)',
+    rules_title: DEFAULT_RULES_TITLE,
+    rules_text: DEFAULT_RULES_TEXT,
+    contact_title: DEFAULT_CONTACT_TITLE,
+    contact_location: DEFAULT_CONTACT_LOCATION,
+    footer_copyright: DEFAULT_FOOTER_COPYRIGHT,
+    footer_tagline: DEFAULT_FOOTER_TAGLINE,
   },
   blackouts: [],
   server_time: dayjs().format('HH:mm:ss'),
@@ -425,7 +440,7 @@ export const Home: React.FC<HomeProps> = ({
           })()}
 
           {/* 6. Rules Footer */}
-          <RulesFooter contactInfo={state?.settings?.contact_info} />
+          <RulesFooter settings={state?.settings} contactInfo={state?.settings?.contact_info} />
         </main>
       </div>
     </div>
