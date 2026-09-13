@@ -305,6 +305,34 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }
   };
 
+  // ฟังก์ชันเปลี่ยนวันที่แบบ Atomic 100% (ปรับทั้งวัน และช่วงเวลาเริ่ม-จบให้เข้ากับวันนั้นทันที ป้องกันการกระตุกหรือดีดเวลากลับ)
+  const handleDateChange = (newDate: string) => {
+    if (!newDate || !dayjs(newDate).isValid()) return;
+    setBookingDate(newDate);
+
+    const targetIsWeekend = dayjs(newDate).day() === 0 || dayjs(newDate).day() === 6;
+    const targetOp = targetIsWeekend
+      ? (settings?.operating_hours_weekend || '09:00-20:00')
+      : (settings?.operating_hours_weekday || '16:30-20:00');
+    const [oStr, cStr] = targetOp.split('-');
+    const oM = timeToMinutes(oStr || (targetIsWeekend ? '09:00' : '16:30'));
+    const cM = timeToMinutes(cStr || '20:00');
+
+    const curSM = timeToMinutes(startTime);
+    let nextStart = startTime;
+    if (curSM < oM || curSM >= cM - 30) {
+      nextStart = minutesToTime(oM);
+      setStartTime(nextStart);
+    }
+
+    const validSM = timeToMinutes(nextStart);
+    const curEM = timeToMinutes(endTime);
+    if (curEM <= validSM || curEM > cM || curEM - validSM > maxBookingHours * 60) {
+      const preferredEnd = Math.min(validSM + 120, cM);
+      setEndTime(minutesToTime(preferredEnd > validSM ? preferredEnd : validSM + 30));
+    }
+  };
+
   // ฟังก์ชันกดเลือกความยาวเวลาอย่างรวดเร็ว (Quick Duration Buttons)
   const handleQuickDuration = (hours: number) => {
     const startM = timeToMinutes(startTime);
@@ -507,7 +535,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 min={dayjs().format('YYYY-MM-DD')}
                 max={dayjs().add(settings?.advance_booking_days || 14, 'day').format('YYYY-MM-DD')}
                 value={bookingDate}
-                onChange={(e) => setBookingDate(e.target.value)}
+                onChange={(e) => handleDateChange(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 bg-white py-2.5 px-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
               />
               <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">

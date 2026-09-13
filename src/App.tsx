@@ -221,12 +221,16 @@ function AppContent() {
         onSelectBookingDetail={handleSelectBookingDetail}
         refreshTrigger={refreshTrigger}
         onStateLoaded={handleStateLoaded}
+        isModalActive={isBookingOpen || isCheckInOutOpen || isAdminLoginOpen || isSuccessOpen || !!selectedBooking}
       />
 
       {/* 1. Modal ฟอร์มจองห้องซ้อมดนตรี (Phase 7) */}
       <BookingModal
         isOpen={isBookingOpen}
-        onClose={() => setIsBookingOpen(false)}
+        onClose={() => {
+          setIsBookingOpen(false);
+          setBookingPrefill(undefined);
+        }}
         onSuccess={handleBookingSuccess}
         rooms={publicState?.rooms || []}
         bookings={publicState?.bookings || []}

@@ -28,6 +28,7 @@ export interface HomeProps {
   onSelectBookingDetail: (booking: Booking) => void;
   refreshTrigger?: number;
   onStateLoaded?: (state: PublicState) => void;
+  isModalActive?: boolean;
 }
 
 // ข้อมูลเริ่มต้นสำหรับแสดงผลทันทีแบบ 0 ms ไม่ต้องรอโหลดหน้าจอเปล่า
@@ -95,6 +96,7 @@ export const Home: React.FC<HomeProps> = ({
   onSelectBookingDetail,
   refreshTrigger,
   onStateLoaded,
+  isModalActive = false,
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>(() => dayjs().format('YYYY-MM-DD'));
   const [state, setState] = useState<PublicState>(() => getInitialState(dayjs().format('YYYY-MM-DD')));
@@ -175,9 +177,10 @@ export const Home: React.FC<HomeProps> = ({
     }
   }, [refreshTrigger, loadData]);
 
-  // เมื่อผู้ใช้สลับหน้าจอหรือเปิดแท็บกลับมา (เช่น กลับมาจากแอปอีเมลหลังกดอนุมัติ) ให้โหลดข้อมูลสดทันที
+  // เมื่อผู้ใช้สลับหน้าจอหรือเปิดแท็บกลับมา ให้โหลดข้อมูลสดทันที (งดรันถ้ากำลังเปิด Modal ใดๆ อยู่ เพื่อไม่ให้กวนฟอร์ม)
   useEffect(() => {
     const handleVisibilityChange = () => {
+      if (isModalActive) return;
       if (document.visibilityState === 'visible') {
         try {
           localStorage.removeItem(`wtk_cached_public_state_${selectedDateRef.current}`);
@@ -186,6 +189,7 @@ export const Home: React.FC<HomeProps> = ({
       }
     };
     const handleFocus = () => {
+      if (isModalActive) return;
       loadData(selectedDateRef.current, true);
     };
 
@@ -195,15 +199,16 @@ export const Home: React.FC<HomeProps> = ({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [loadData]);
+  }, [loadData, isModalActive]);
 
-  // ระบบ Auto-refresh ทุก 15 วินาที เพื่อให้ตารางหน้าเว็บเป็นปัจจุบันตลอดเวลา
+  // ระบบ Auto-refresh ทุก 15 วินาที เพื่อให้ตารางหน้าเว็บเป็นปัจจุบันตลอดเวลา (หยุดชั่วคราวขณะ Modal กำลังเปิดอยู่ 100%)
   useEffect(() => {
+    if (isModalActive) return;
     const interval = setInterval(() => {
       loadData(selectedDateRef.current, false);
     }, 15000);
     return () => clearInterval(interval);
-  }, [loadData]);
+  }, [loadData, isModalActive]);
 
   // คำนวณจำนวนคิวเพื่อแสดงใน DateStrip และ CalendarView
   const bookingCountsByDate = React.useMemo(() => {

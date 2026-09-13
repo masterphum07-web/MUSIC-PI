@@ -18,6 +18,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
+        banner: `/* WTK Build: ${Date.now()} */`,
         manualChunks: {
           'vendor-recharts': ['recharts'],
           'vendor-utils': ['dayjs', 'lucide-react', 'clsx', 'tailwind-merge'],

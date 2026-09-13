@@ -281,7 +281,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               <button
                 key={dateStr}
                 type="button"
-                onClick={() => isClickable && onSelectDate(dateStr)}
+                onClick={() => {
+                  if (isSelected && onBookRoom) {
+                    onBookRoom(dateStr);
+                  } else if (isClickable) {
+                    onSelectDate(dateStr);
+                  }
+                }}
                 disabled={!isClickable}
                 className={cn(
                   'group relative min-h-[78px] sm:min-h-[92px] p-1.5 sm:p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all duration-200 select-none',
