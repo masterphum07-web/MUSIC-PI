@@ -4,11 +4,12 @@ import { PublicState, Booking } from '@/types';
 import { AppHeader } from '@/components/dashboard/AppHeader';
 import { AnnouncementBar } from '@/components/dashboard/AnnouncementBar';
 import { DateStrip } from '@/components/dashboard/DateStrip';
+import { CalendarView } from '@/components/dashboard/CalendarView';
 import { RoomStatusCards } from '@/components/dashboard/RoomStatusCards';
 import { TimelineGrid } from '@/components/dashboard/TimelineGrid';
 import { TodaySummary } from '@/components/dashboard/TodaySummary';
 import { RulesFooter } from '@/components/dashboard/RulesFooter';
-import { RotateCw, Music } from 'lucide-react';
+import { RotateCw, Music, Calendar } from 'lucide-react';
 import dayjs from 'dayjs';
 
 export interface HomeProps {
@@ -35,15 +36,15 @@ const DEFAULT_INITIAL_STATE: PublicState = {
   ],
   bookings: [],
   settings: {
-    operating_hours_weekday: '08:00-20:00',
-    operating_hours_weekend: '09:00-18:00',
-    min_booking_minutes: 60,
+    operating_hours_weekday: '16:30-20:00',
+    operating_hours_weekend: '09:00-20:00',
+    min_booking_minutes: 30,
     max_booking_hours: 3,
     advance_booking_days: 14,
-    grace_period_minutes: 15,
+    grace_period_minutes: 30,
     privacy_mode: false,
     system_status: 'open',
-    announcement_text: 'ยินดีต้อนรับสู่ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก. เปิดให้บริการ 08:00 - 20:00 น.',
+    announcement_text: 'ยินดีต้อนรับสู่ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก. เปิดให้บริการ จันทร์-ศุกร์ 16:30 - 20:00 น. และ เสาร์-อาทิตย์ 09:00 - 20:00 น.',
     contact_info: 'ชมรมดนตรี วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก (วทก.)',
   },
   blackouts: [],
@@ -85,6 +86,7 @@ export const Home: React.FC<HomeProps> = ({
   const [isRefreshing, setIsRefreshing] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [scheduleView, setScheduleView] = useState<'calendar' | 'strip'>('calendar');
 
   const onStateLoadedRef = React.useRef(onStateLoaded);
   useEffect(() => {
@@ -188,10 +190,14 @@ export const Home: React.FC<HomeProps> = ({
     return () => clearInterval(interval);
   }, [loadData]);
 
-  // คำนวณจำนวนคิวเพื่อแสดงใน DateStrip badge
+  // คำนวณจำนวนคิวเพื่อแสดงใน DateStrip และ CalendarView
   const bookingCountsByDate = React.useMemo(() => {
     const counts: Record<string, number> = {};
-    if (state?.bookings) {
+    if (state?.calendar_summary) {
+      for (const [d, sum] of Object.entries(state.calendar_summary)) {
+        counts[d] = sum.count;
+      }
+    } else if (state?.bookings) {
       counts[selectedDate] = state.bookings.filter((b) => b.status !== 'cancelled').length;
     }
     return counts;
@@ -217,14 +223,69 @@ export const Home: React.FC<HomeProps> = ({
 
         {/* Main Content Area */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
-          {/* Top Bar: DateStrip & Manual Refresh Indicator */}
+          {/* Top Bar: Calendar View / DateStrip & Manual Refresh Indicator */}
           <div className="space-y-3">
-            <DateStrip
-              selectedDate={selectedDate}
-              onSelectDate={(newDate) => setSelectedDate(newDate)}
-              bookingCountsByDate={bookingCountsByDate}
-              advanceDays={state?.settings?.advance_booking_days || 14}
-            />
+            {/* View Switcher Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-primary" />
+                  <span>ตารางตรวจสอบสถานะความว่าง & คิวจอง</span>
+                </span>
+                <span className="text-[11px] text-slate-400 hidden sm:inline">
+                  (เลือกดูแบบปฏิทินรายเดือน หรือแถบเลื่อนรายวัน)
+                </span>
+              </div>
+
+              {/* View Switcher Segmented Control */}
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/70 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setScheduleView('calendar')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    scheduleView === 'calendar'
+                      ? 'bg-white text-primary shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5 text-secondary" />
+                  <span>🗓️ ปฏิทินแสดงความว่าง</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScheduleView('strip')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    scheduleView === 'strip'
+                      ? 'bg-white text-primary shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <span>↔️ แถบเลื่อน</span>
+                </button>
+              </div>
+            </div>
+
+            {/* View Component */}
+            {scheduleView === 'calendar' ? (
+              <CalendarView
+                selectedDate={selectedDate}
+                onSelectDate={(newDate) => setSelectedDate(newDate)}
+                onBookRoom={(date) => onOpenBookingModal({ date })}
+                advanceDays={state?.settings?.advance_booking_days || 14}
+                calendarSummary={state?.calendar_summary}
+                bookings={state?.bookings || []}
+                blackouts={state?.blackouts || []}
+                weekdayHours={state?.settings?.operating_hours_weekday || '16:30-20:00'}
+                weekendHours={state?.settings?.operating_hours_weekend || '09:00-20:00'}
+              />
+            ) : (
+              <DateStrip
+                selectedDate={selectedDate}
+                onSelectDate={(newDate) => setSelectedDate(newDate)}
+                bookingCountsByDate={bookingCountsByDate}
+                advanceDays={state?.settings?.advance_booking_days || 14}
+              />
+            )}
 
             <div className="flex items-center justify-between text-xs text-slate-500 px-1">
               <div className="flex items-center gap-1.5">
@@ -345,8 +406,8 @@ export const Home: React.FC<HomeProps> = ({
                     selectedDate={selectedDate}
                     operatingHours={
                       dayjs(selectedDate).day() === 0 || dayjs(selectedDate).day() === 6
-                        ? state.settings?.operating_hours_weekend || '09:00-18:00'
-                        : state.settings?.operating_hours_weekday || '08:00-20:00'
+                        ? state.settings?.operating_hours_weekend || '09:00-20:00'
+                        : state.settings?.operating_hours_weekday || '16:30-20:00'
                     }
                     onSelectSlot={(roomId, date, startTime, endTime) => {
                       onOpenBookingModal({

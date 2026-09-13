@@ -37,10 +37,10 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   const [isFetching, setIsFetching] = useState(true);
 
   const [weekdayHours, setWeekdayHours] = useState(
-    initialSettings?.operating_hours_weekday || '08:00-20:00'
+    initialSettings?.operating_hours_weekday || '16:30-20:00'
   );
   const [weekendHours, setWeekendHours] = useState(
-    initialSettings?.operating_hours_weekend || '09:00-18:00'
+    initialSettings?.operating_hours_weekend || '09:00-20:00'
   );
   const [maxHours, setMaxHours] = useState<number>(
     initialSettings?.max_booking_hours || 3
@@ -447,19 +447,19 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <Input
             label="เวลาทำการ วันจันทร์ - ศุกร์"
-            placeholder="08:00-20:00"
+            placeholder="16:30-20:00"
             value={weekdayHours}
             onChange={(e) => setWeekdayHours(e.target.value)}
-            helperText="ฟอร์แมต HH:mm-HH:mm"
+            helperText="ฟอร์แมต HH:mm-HH:mm (เช่น 16:30-20:00)"
             required
           />
 
           <Input
             label="เวลาทำการ วันเสาร์ - อาทิตย์"
-            placeholder="09:00-18:00"
+            placeholder="09:00-20:00"
             value={weekendHours}
             onChange={(e) => setWeekendHours(e.target.value)}
-            helperText="ฟอร์แมต HH:mm-HH:mm"
+            helperText="ฟอร์แมต HH:mm-HH:mm (เช่น 09:00-20:00)"
             required
           />
 

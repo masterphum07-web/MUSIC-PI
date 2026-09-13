@@ -40,7 +40,7 @@ export const RulesFooter: React.FC<{ contactInfo?: string }> = ({ contactInfo })
             </div>
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-secondary flex-shrink-0" />
-              <span>เวลาทำการ 08:00 - 20:00 น.</span>
+              <span>เวลาทำการ: จันทร์-ศุกร์ 16:30 - 20:00 น. | เสาร์-อาทิตย์ 09:00 - 20:00 น.</span>
             </div>
             {contactInfo && (
               <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/60 text-[11px] text-slate-300 mt-2">

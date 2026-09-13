@@ -290,8 +290,8 @@ function seedInitialData(ss) {
   // 4. ค่าคอนฟิกเริ่มต้นของระบบ (Settings)
   var settingsSheet = ss.getSheetByName("Settings");
   var defaultSettings = [
-    ["operating_hours_weekday", "08:00-20:00", "เวลาเปิด-ปิดห้องซ้อม วันจันทร์-ศุกร์ (HH:mm-HH:mm)"],
-    ["operating_hours_weekend", "09:00-18:00", "เวลาเปิด-ปิดห้องซ้อม วันเสาร์-อาทิตย์ (HH:mm-HH:mm)"],
+    ["operating_hours_weekday", "16:30-20:00", "เวลาเปิด-ปิดห้องซ้อม วันจันทร์-ศุกร์ (HH:mm-HH:mm)"],
+    ["operating_hours_weekend", "09:00-20:00", "เวลาเปิด-ปิดห้องซ้อม วันเสาร์-อาทิตย์ (HH:mm-HH:mm)"],
     ["min_booking_minutes", "30", "ระยะเวลาจองขั้นต่ำต่อครั้ง (นาที)"],
     ["max_booking_hours", "3", "ระยะเวลาจองสูงสุดต่อครั้ง (ชั่วโมง)"],
     ["advance_booking_days", "14", "อนุญาตให้จองล่วงหน้าได้ไม่เกินกี่วัน"],

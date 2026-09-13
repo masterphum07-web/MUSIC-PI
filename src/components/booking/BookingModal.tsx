@@ -47,8 +47,52 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   // Form State - ล็อคห้องซ้อมเดี่ยว วทก.
   const roomId = 'ROOM-01';
   const [bookingDate, setBookingDate] = useState<string>(() => dayjs().format('YYYY-MM-DD'));
-  const [startTime, setStartTime] = useState<string>('13:00');
-  const [endTime, setEndTime] = useState<string>('15:00');
+
+  // ตรวจสอบวันหยุด (เสาร์-อาทิตย์) หรือวันธรรมดา (จันทร์-ศุกร์)
+  const isWeekend = React.useMemo(() => {
+    const day = dayjs(bookingDate).day();
+    return day === 0 || day === 6; // 0 = อาทิตย์, 6 = เสาร์
+  }, [bookingDate]);
+
+  // ช่วงเวลาทำการจริงของวันที่เลือก
+  const operatingHoursStr = React.useMemo(() => {
+    if (isWeekend) {
+      return settings?.operating_hours_weekend || '09:00-20:00';
+    }
+    return settings?.operating_hours_weekday || '16:30-20:00';
+  }, [isWeekend, settings]);
+
+  const [openMins, closeMins] = React.useMemo(() => {
+    const parts = operatingHoursStr.split('-');
+    const open = timeToMinutes(parts[0]?.trim() || (isWeekend ? '09:00' : '16:30'));
+    const close = timeToMinutes(parts[1]?.trim() || '20:00');
+    return [open, close];
+  }, [operatingHoursStr, isWeekend]);
+
+  const [startTime, setStartTime] = useState<string>(() => (dayjs().day() === 0 || dayjs().day() === 6 ? '09:00' : '16:30'));
+  const [endTime, setEndTime] = useState<string>(() => (dayjs().day() === 0 || dayjs().day() === 6 ? '11:00' : '18:30'));
+
+  // สร้างรายการตัวเลือกเวลาเริ่มต้น (สล็อตละ 30 นาที จนถึง 30 นาทีก่อนปิด)
+  const startTimeOptions = React.useMemo(() => {
+    const opts: string[] = [];
+    for (let m = openMins; m <= closeMins - 30; m += 30) {
+      opts.push(minutesToTime(m));
+    }
+    return opts;
+  }, [openMins, closeMins]);
+
+  // สร้างรายการตัวเลือกเวลาสิ้นสุด (ตาม startTime ที่เลือก และไม่เกิน max_booking_hours)
+  const maxBookingHours = settings?.max_booking_hours || 3;
+  const endTimeOptions = React.useMemo(() => {
+    const currentStartM = timeToMinutes(startTime);
+    const validStartM = (currentStartM >= openMins && currentStartM < closeMins) ? currentStartM : openMins;
+    const maxEndM = Math.min(closeMins, validStartM + maxBookingHours * 60);
+    const opts: string[] = [];
+    for (let m = validStartM + 30; m <= maxEndM; m += 30) {
+      opts.push(minutesToTime(m));
+    }
+    return opts;
+  }, [startTime, openMins, closeMins, maxBookingHours]);
 
   // รายชื่อหลักสูตร / สาขาวิชาที่ดึงจากระบบ หรือค่ามาตรฐาน วทก.
   const availableMajors = (settings?.majors && settings.majors.length > 0)
@@ -89,15 +133,56 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   // กำหนดค่าเริ่มต้นตาม prefill เมื่อเปิด Modal
   useEffect(() => {
     if (isOpen) {
-      if (prefill?.date) setBookingDate(prefill.date);
-      if (prefill?.startTime) setStartTime(prefill.startTime);
-      if (prefill?.endTime) setEndTime(prefill.endTime);
+      const targetDate = prefill?.date || dayjs().format('YYYY-MM-DD');
+      const targetIsWeekend = dayjs(targetDate).day() === 0 || dayjs(targetDate).day() === 6;
+      const targetOp = targetIsWeekend
+        ? (settings?.operating_hours_weekend || '09:00-20:00')
+        : (settings?.operating_hours_weekday || '16:30-20:00');
+      const [oStr, cStr] = targetOp.split('-');
+      const oM = timeToMinutes(oStr || (targetIsWeekend ? '09:00' : '16:30'));
+      const cM = timeToMinutes(cStr || '20:00');
+
+      setBookingDate(targetDate);
+
+      let initialStart = prefill?.startTime;
+      let initialEnd = prefill?.endTime;
+
+      if (!initialStart || timeToMinutes(initialStart) < oM || timeToMinutes(initialStart) >= cM - 30) {
+        initialStart = minutesToTime(oM);
+      }
+      const sM = timeToMinutes(initialStart);
+      if (!initialEnd || timeToMinutes(initialEnd) <= sM || timeToMinutes(initialEnd) > cM) {
+        initialEnd = minutesToTime(Math.min(sM + 120, cM));
+      }
+
+      setStartTime(initialStart);
+      setEndTime(initialEnd);
       setCurrentStep(1);
       setErrors({});
       setAcceptedTerms(false);
       setSubmissionPhase('');
     }
-  }, [isOpen, prefill]);
+  }, [isOpen, prefill, settings]);
+
+  // ซิงก์เวลาเมื่อผู้ใช้เปลี่ยนวันที่ระหว่างวันธรรมดา / วันหยุด ให้ตรงตามเวลาเปิดของวันนั้นๆ
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const currentSM = timeToMinutes(startTime);
+    const currentEM = timeToMinutes(endTime);
+
+    let validStart = startTime;
+    if (currentSM < openMins || currentSM >= closeMins - 30) {
+      validStart = minutesToTime(openMins);
+      setStartTime(validStart);
+    }
+
+    const validSM = timeToMinutes(validStart);
+    if (currentEM <= validSM || currentEM > closeMins || currentEM - validSM > maxBookingHours * 60) {
+      const preferredEnd = Math.min(validSM + 120, closeMins);
+      setEndTime(minutesToTime(preferredEnd > validSM ? preferredEnd : validSM + 30));
+    }
+  }, [bookingDate, openMins, closeMins, maxBookingHours, isOpen]);
 
   // ตัวเลือกสาขาวิชาของ วทก. (แบบไดนามิก 100%)
   const majorOptions = availableMajors.map((item) => ({
@@ -133,11 +218,20 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       return;
     }
 
-    if (eMins - sMins > 180) {
+    if (sMins < openMins || eMins > closeMins) {
       setAvailabilityStatus({
         checked: true,
         available: false,
-        message: 'ระยะเวลาจองสูงสุดไม่เกิน 3 ชั่วโมงต่อครั้ง',
+        message: `อยู่นอกช่วงเวลาเปิดให้บริการ (${operatingHoursStr} น.)`,
+      });
+      return;
+    }
+
+    if (eMins - sMins > maxBookingHours * 60) {
+      setAvailabilityStatus({
+        checked: true,
+        available: false,
+        message: `ระยะเวลาจองสูงสุดไม่เกิน ${maxBookingHours} ชั่วโมงต่อครั้ง`,
       });
       return;
     }
@@ -165,15 +259,27 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       available: true,
       message: 'ห้องว่าง พร้อมสำหรับการจอง',
     });
-  }, [isOpen, bookingDate, startTime, endTime, sMins, eMins, bookings]);
+  }, [isOpen, bookingDate, startTime, endTime, sMins, eMins, bookings, openMins, closeMins, operatingHoursStr, maxBookingHours]);
+
+  // เมื่อเปลี่ยนเวลาเริ่มต้น
+  const handleStartTimeChange = (newStartTime: string) => {
+    setStartTime(newStartTime);
+    const newStartM = timeToMinutes(newStartTime);
+    const currentEndM = timeToMinutes(endTime);
+    if (currentEndM <= newStartM || currentEndM > closeMins || currentEndM - newStartM > maxBookingHours * 60) {
+      const preferredEndM = Math.min(newStartM + 120, closeMins);
+      setEndTime(minutesToTime(preferredEndM > newStartM ? preferredEndM : newStartM + 30));
+    }
+  };
 
   // ฟังก์ชันกดเลือกความยาวเวลาอย่างรวดเร็ว (Quick Duration Buttons)
   const handleQuickDuration = (hours: number) => {
     const startM = timeToMinutes(startTime);
     const targetEndM = startM + hours * 60;
-    const maxDayM = 20 * 60; // 20:00 น.
-    const cappedEndM = Math.min(targetEndM, maxDayM);
-    setEndTime(minutesToTime(cappedEndM));
+    const cappedEndM = Math.min(targetEndM, closeMins);
+    if (cappedEndM > startM) {
+      setEndTime(minutesToTime(cappedEndM));
+    }
   };
 
   // ตรวจสอบความถูกต้องของ Step 2
@@ -368,6 +474,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </span>
             </div>
 
+            {/* Operating Hours Info Banner */}
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-2.5 text-xs text-primary flex items-center justify-between">
+              <div className="flex items-center gap-1.5 font-medium">
+                <Clock className="w-4 h-4 text-secondary flex-shrink-0" />
+                <span>
+                  เวลาทำการ{isWeekend ? 'วันเสาร์-อาทิตย์' : 'วันจันทร์-ศุกร์'}: <strong className="font-bold text-slate-800">{operatingHoursStr} น.</strong>
+                </span>
+              </div>
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                isWeekend ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-teal-100 text-teal-800 border border-teal-300'
+              }`}>
+                {isWeekend ? 'วันหยุด เสาร์-อาทิตย์' : 'วันธรรมดา จันทร์-ศุกร์'}
+              </span>
+            </div>
+
             {/* Time Slot Selectors */}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -377,10 +498,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </label>
                 <select
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  onChange={(e) => handleStartTimeChange(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white py-2.5 px-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-mono font-semibold text-slate-800"
                 >
-                  {['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30'].map((t) => (
+                  {startTimeOptions.map((t) => (
                     <option key={t} value={t}>{t} น.</option>
                   ))}
                 </select>
@@ -396,7 +517,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   onChange={(e) => setEndTime(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white py-2.5 px-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-mono font-semibold text-slate-800"
                 >
-                  {['08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'].map((t) => (
+                  {endTimeOptions.map((t) => (
                     <option key={t} value={t}>{t} น.</option>
                   ))}
                 </select>
@@ -410,20 +531,26 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 เลือกระยะเวลาด่วน:
               </span>
               <div className="flex flex-wrap gap-2">
-                {[1, 1.5, 2, 2.5, 3].map((hr) => (
-                  <button
-                    key={hr}
-                    type="button"
-                    onClick={() => handleQuickDuration(hr)}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
-                      durationHours === hr
-                        ? 'bg-primary text-white border-primary shadow-sm'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    {hr} ชั่วโมง
-                  </button>
-                ))}
+                {[1, 1.5, 2, 2.5, 3].map((hr) => {
+                  const isAvailable = sMins + hr * 60 <= closeMins;
+                  return (
+                    <button
+                      key={hr}
+                      type="button"
+                      disabled={!isAvailable}
+                      onClick={() => handleQuickDuration(hr)}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                        durationHours === hr
+                          ? 'bg-primary text-white border-primary shadow-sm'
+                          : isAvailable
+                          ? 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          : 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed'
+                      }`}
+                    >
+                      {hr} ชั่วโมง
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

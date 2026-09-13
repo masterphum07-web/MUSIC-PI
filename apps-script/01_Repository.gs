@@ -321,8 +321,8 @@ function deleteRow(sheetName, idColumnName, idValue) {
  */
 function getSettingsMap() {
   var map = {
-    operating_hours_weekday: "08:00-20:00",
-    operating_hours_weekend: "09:00-18:00",
+    operating_hours_weekday: "16:30-20:00",
+    operating_hours_weekend: "09:00-20:00",
     min_booking_minutes: "30",
     max_booking_hours: "3",
     advance_booking_days: "14",

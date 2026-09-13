@@ -90,6 +90,16 @@ export interface Blackout {
   reason: string;
 }
 
+// ข้อมูลสรุปสถานะความว่างรายวันสำหรับแสดงในปฏิทิน
+export interface DayCalendarSummary {
+  date: string;
+  count: number;
+  total_minutes: number;
+  status: 'available' | 'partial' | 'full' | 'closed';
+  operating_hours: string;
+  reason?: string;
+}
+
 // ข้อมูลสถานะสาธารณะสำหรับหน้า Dashboard
 export interface PublicState {
   selected_date: string;
@@ -97,6 +107,7 @@ export interface PublicState {
   bookings: Booking[];
   settings: PublicSettings;
   blackouts: Blackout[];
+  calendar_summary?: Record<string, DayCalendarSummary>;
   server_time: string;
 }
 

@@ -188,12 +188,12 @@ function validateOperatingHours(dateStr, startTime, endTime) {
   var isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
 
   var operatingStr = isWeekend 
-    ? (settings.operating_hours_weekend || "09:00-18:00") 
-    : (settings.operating_hours_weekday || "08:00-20:00");
+    ? (settings.operating_hours_weekend || "09:00-20:00") 
+    : (settings.operating_hours_weekday || "16:30-20:00");
 
   var parts = operatingStr.split("-");
   if (parts.length !== 2) {
-    parts = ["08:00", "20:00"];
+    parts = isWeekend ? ["09:00", "20:00"] : ["16:30", "20:00"];
   }
 
   var opOpen = timeToMinutes(parts[0]);
@@ -506,8 +506,8 @@ function getPublicState(targetDate) {
 
   // 5. ข้อมูลการตั้งค่าที่อนุญาตให้ Public ทราบ
   var publicSettings = {
-    operating_hours_weekday: settings.operating_hours_weekday || "08:00-20:00",
-    operating_hours_weekend: settings.operating_hours_weekend || "09:00-18:00",
+    operating_hours_weekday: settings.operating_hours_weekday || "16:30-20:00",
+    operating_hours_weekend: settings.operating_hours_weekend || "09:00-20:00",
     min_booking_minutes: parseInt(settings.min_booking_minutes || "30", 10),
     max_booking_hours: parseFloat(settings.max_booking_hours || "3"),
     advance_booking_days: parseInt(settings.advance_booking_days || "14", 10),
@@ -519,12 +519,84 @@ function getPublicState(targetDate) {
     majors: activeMajors
   };
 
+  // 6. คำนวณสรุปสถานะความว่างรายวัน (calendar_summary) สำหรับแสดงผลในปฏิทิน
+  var advanceDays = parseInt(settings.advance_booking_days || "14", 10);
+  var weekdayHours = publicSettings.operating_hours_weekday;
+  var weekendHours = publicSettings.operating_hours_weekend;
+  var calendarSummary = {};
+  var tz = Session.getScriptTimeZone() || "GMT+7";
+
+  for (var d = 0; d <= advanceDays + 30; d++) {
+    var dt = new Date(now.getTime() + d * 24 * 60 * 60 * 1000);
+    var dKey = Utilities.formatDate(dt, tz, "yyyy-MM-dd");
+    var dayNum = dt.getDay(); // 0=Sun, 6=Sat
+    var opHrs = (dayNum === 0 || dayNum === 6) ? weekendHours : weekdayHours;
+
+    calendarSummary[dKey] = {
+      date: dKey,
+      count: 0,
+      total_minutes: 0,
+      status: "available",
+      operating_hours: opHrs
+    };
+  }
+
+  // วันที่มี Blackouts
+  for (var k = 0; k < allBlackouts.length; k++) {
+    var bo = allBlackouts[k];
+    var bFrom = formatDateToString(bo.date_from);
+    var bTo = formatDateToString(bo.date_to);
+    for (var dateKey in calendarSummary) {
+      if (dateKey >= bFrom && dateKey <= bTo) {
+        calendarSummary[dateKey].status = "closed";
+        calendarSummary[dateKey].reason = bo.reason || "ปิดบริการ";
+      }
+    }
+  }
+
+  // นับจำนวนการจองและเวลารวมของแต่ละวัน
+  for (var j = 0; j < allBookings.length; j++) {
+    var bk = allBookings[j];
+    var bkDate = formatDateToString(bk.booking_date);
+    if (calendarSummary[bkDate] && calendarSummary[bkDate].status !== "closed") {
+      var bkStatus = String(bk.status || "").toLowerCase();
+      if (bkStatus !== "cancelled") {
+        calendarSummary[bkDate].count++;
+        var sMin = timeToMinutes(bk.start_time);
+        var eMin = timeToMinutes(bk.end_time);
+        if (eMin > sMin) {
+          calendarSummary[bkDate].total_minutes += (eMin - sMin);
+        }
+      }
+    }
+  }
+
+  // กำหนดสถานะ available / partial / full
+  for (var dKey in calendarSummary) {
+    var item = calendarSummary[dKey];
+    if (item.status === "closed") continue;
+
+    var hrsParts = (item.operating_hours || "16:30-20:00").split("-");
+    var oOpen = timeToMinutes(hrsParts[0] || "16:30");
+    var oClose = timeToMinutes(hrsParts[1] || "20:00");
+    var totalOpMins = (oClose > oOpen) ? (oClose - oOpen) : 210;
+
+    if (item.count === 0) {
+      item.status = "available";
+    } else if (item.total_minutes >= totalOpMins) {
+      item.status = "full";
+    } else {
+      item.status = "partial";
+    }
+  }
+
   return {
     selected_date: dateStr,
     rooms: activeRooms,
     bookings: dayBookings,
     settings: publicSettings,
     blackouts: dayBlackouts,
+    calendar_summary: calendarSummary,
     server_time: new Date()
   };
 }
