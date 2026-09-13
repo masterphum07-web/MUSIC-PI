@@ -105,12 +105,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [phone, setPhone] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [partySize, setPartySize] = useState<number>(4);
-  const [purpose, setPurpose] = useState<string>('ซ้อมวงดนตรี');
-  const [selectedEquipment, setSelectedEquipment] = useState<string[]>([
-    'กลองชุด Pearl',
-    'แอมป์กีตาร์ Marshall',
-    'แอมป์เบส Fender',
-  ]);
+  const [purpose, setPurpose] = useState<string>('');
   const [honeypot, setHoneypot] = useState<string>('');
 
   const [acceptedTerms, setAcceptedTerms] = useState<boolean>(false);
@@ -189,16 +184,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     value: item,
     label: item,
   }));
-
-  // อุปกรณ์ดนตรีที่มีในห้องซ้อม
-  const availableEquipment = [
-    'กลองชุด Pearl',
-    'แอมป์กีตาร์ Marshall',
-    'แอมป์เบส Fender',
-    'คีย์บอร์ด Roland',
-    'ไมโครโฟน Shure x2',
-    'PA System & มอนิเตอร์',
-  ];
 
   // คำนวณความยาวเวลาการจอง (ชั่วโมง)
   const sMins = timeToMinutes(startTime);
@@ -291,6 +276,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     if (partySize < 1 || partySize > 15) {
       errs.partySize = 'จำนวนผู้ร่วมใช้งานต้องอยู่ระหว่าง 1 ถึง 15 คน';
     }
+    if (!purpose.trim() || purpose.trim().length < 3) {
+      errs.purpose = 'กรุณาระบุสาเหตุหรือวัตถุประสงค์ในการขอใช้ห้องซ้อมอย่างน้อย 3 ตัวอักษร';
+    }
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errs.email = 'รูปแบบอีเมลไม่ถูกต้อง';
     }
@@ -327,10 +315,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         student_year: studentYear,
         major: major,
         party_size: partySize,
-        purpose: purpose,
+        purpose: purpose.trim(),
         phone: phone.trim(),
         email: email.trim(),
-        equipment: selectedEquipment.join(', '),
+        equipment: '',
         _hp: honeypot,
       });
 
@@ -688,57 +676,38 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               />
             </div>
 
+            {/* สาเหตุ / วัตถุประสงค์ในการขอใช้ห้อง (ช่องพิมพ์ข้อความอิสระ) */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                วัตถุประสงค์การใช้งาน *
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                <span>สาเหตุ / วัตถุประสงค์ในการขอใช้ห้องซ้อม *</span>
+                <span className="text-[11px] font-normal text-slate-400">(พิมพ์ระบุเหตุผล)</span>
               </label>
-              <select
+              <textarea
+                rows={3}
+                placeholder="ระบุสาเหตุหรือเหตุผลในการขอใช้ห้องซ้อม เช่น ซ้อมวงดนตรีเตรียมงานวิทยาลัย, ซ้อมวิชาเรียน, ซ้อมเดี่ยวก่อนสอบปฏิบัติ ฯลฯ"
                 value={purpose}
-                onChange={(e) => setPurpose(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white py-2 px-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="ซ้อมวงดนตรี">ซ้อมวงดนตรี</option>
-                <option value="ซ้อมส่วนตัว / ซ้อมเดี่ยว">ซ้อมส่วนตัว / ซ้อมเดี่ยว</option>
-                <option value="เตรียมการแสดงงานวิทยาลัย">เตรียมการแสดงงานวิทยาลัย</option>
-                <option value="อัดเพลง / ทำสื่อกิจกรรม">อัดเพลง / ทำสื่อกิจกรรม</option>
-                <option value="อื่นๆ">อื่นๆ</option>
-              </select>
-            </div>
-
-            {/* Equipment Selection */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                อุปกรณ์ดนตรีที่ต้องการขอใช้งานเพิ่มเติม
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {availableEquipment.map((item) => {
-                  const isChecked = selectedEquipment.includes(item);
-                  return (
-                    <label
-                      key={item}
-                      className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer select-none transition-all ${
-                        isChecked
-                          ? 'bg-blue-50/80 border-primary text-primary font-bold shadow-sm'
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedEquipment([...selectedEquipment, item]);
-                          } else {
-                            setSelectedEquipment(selectedEquipment.filter((x) => x !== item));
-                          }
-                        }}
-                        className="rounded text-primary focus:ring-primary h-4 w-4"
-                      />
-                      <span className="truncate">{item}</span>
-                    </label>
-                  );
-                })}
-              </div>
+                onChange={(e) => {
+                  setPurpose(e.target.value);
+                  if (errors.purpose) {
+                    setErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.purpose;
+                      return next;
+                    });
+                  }
+                }}
+                className={`w-full rounded-xl border py-2.5 px-3 text-sm focus:ring-2 focus:ring-primary/20 transition-all text-slate-800 resize-none ${
+                  errors.purpose
+                    ? 'border-rose-400 bg-rose-50/30 focus:border-rose-500'
+                    : 'border-slate-300 bg-white focus:border-primary'
+                }`}
+                required
+              />
+              {errors.purpose && (
+                <span className="text-xs text-rose-500 mt-1 block font-medium">
+                  {errors.purpose}
+                </span>
+              )}
             </div>
 
             <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-3">
@@ -813,20 +782,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </div>
               </div>
 
-              {selectedEquipment.length > 0 && (
+              {purpose && (
                 <div className="border-t border-slate-200/80 pt-2.5">
                   <span className="text-slate-400 block text-[11px] mb-1">
-                    อุปกรณ์ดนตรีที่ขอใช้:
+                    สาเหตุ / วัตถุประสงค์ในการขอใช้ห้อง:
                   </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedEquipment.map((eq) => (
-                      <span
-                        key={eq}
-                        className="px-2 py-0.5 bg-white text-slate-700 rounded-md border border-slate-200 text-[11px]"
-                      >
-                        {eq}
-                      </span>
-                    ))}
+                  <div className="font-semibold text-slate-800 bg-white p-2.5 rounded-xl border border-slate-200 text-xs leading-relaxed">
+                    {purpose}
                   </div>
                 </div>
               )}
