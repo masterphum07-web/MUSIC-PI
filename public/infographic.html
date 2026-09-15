@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>อินโฟกราฟฟิกแนะนำระบบจองห้องซ้อมดนตรี — ชมรมดนตรี วทก.</title>
+  <link rel="icon" type="image/png" href="./logo.png">
+  
+  <!-- Google Fonts: Prompt & IBM Plex Sans Thai -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #0F3D5C;
+      --primary-dark: #0A2B42;
+      --primary-light: #16537E;
+      --secondary: #1B7A8C;
+      --secondary-light: #2596be;
+      --gold: #D4AF37;
+      --gold-light: #F3E5AB;
+      --gold-dark: #AA820A;
+      --surface: #F8FAFC;
+      --card: #FFFFFF;
+      --text-main: #0F172A;
+      --text-muted: #475569;
+      --emerald: #059669;
+      --rose: #E11D48;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0A2239 0%, #0F3D5C 50%, #134B6E 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Print & Action Bar */
+    .action-bar {
+      width: 100%;
+      max-width: 900px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 14px;
+      font-family: 'Prompt', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #D4AF37 0%, #F3C644 100%);
+      color: #1A1300;
+      box-shadow: 0 4px 14px rgba(212, 175, 55, 0.35);
+    }
+    .btn-gold:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+    }
+
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.12);
+      color: #FFFFFF;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      backdrop-blur: 8px;
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* Poster Container */
+    .poster {
+      width: 100%;
+      max-width: 900px;
+      background: #FFFFFF;
+      border-radius: 28px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Header Section */
+    .poster-header {
+      background: linear-gradient(135deg, #0A2239 0%, #0F3D5C 60%, #16537E 100%);
+      color: #FFFFFF;
+      padding: 40px 36px 32px 36px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .poster-header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 24px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .logo-container {
+      width: 76px;
+      height: 76px;
+      background: #FFFFFF;
+      border-radius: 20px;
+      padding: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .logo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .org-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #7DD3FC;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .college-name {
+      font-size: 14px;
+      color: #E2E8F0;
+      font-weight: 400;
+    }
+
+    .main-title-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(212, 175, 55, 0.2);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      color: #F3E5AB;
+      padding: 4px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .main-title {
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1.25;
+      background: linear-gradient(135deg, #FFFFFF 30%, #F3E5AB 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .sub-title {
+      font-size: 15px;
+      color: #CBD5E1;
+      line-height: 1.6;
+      max-width: 680px;
+    }
+
+    /* Showcase Banner Visual */
+    .showcase-banner {
+      width: 100%;
+      height: 280px;
+      background: #0B192C;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .showcase-banner img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .banner-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(15, 23, 42, 0.8) 0%, transparent 60%);
+      display: flex;
+      align-items: flex-end;
+      padding: 20px 36px;
+    }
+
+    .banner-text {
+      color: #FFFFFF;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .banner-tag {
+      background: rgba(16, 185, 129, 0.9);
+      color: #FFFFFF;
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* Content Body */
+    .poster-body {
+      padding: 36px;
+      background: #FFFFFF;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .section-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: #EFF6FF;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .section-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* 3-Step Process Cards */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+
+    .step-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 20px;
+      padding: 24px 20px;
+      position: relative;
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .step-card:hover {
+      border-color: #38BDF8;
+      box-shadow: 0 10px 25px -5px rgba(15, 61, 92, 0.08);
+      transform: translateY(-3px);
+    }
+
+    .step-number {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      font-size: 32px;
+      font-weight: 800;
+      color: #E2E8F0;
+      line-height: 1;
+    }
+
+    .step-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-bottom: 16px;
+      box-shadow: 0 6px 16px rgba(15, 61, 92, 0.2);
+    }
+
+    .step-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 8px;
+    }
+
+    .step-desc {
+      font-size: 12.5px;
+      color: #64748B;
+      line-height: 1.6;
+    }
+
+    .step-highlight {
+      display: inline-block;
+      margin-top: 12px;
+      background: #EFF6FF;
+      color: #1E40AF;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* 2-Columns Feature Matrix */
+    .two-col-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 36px;
+    }
+
+    .info-box {
+      border-radius: 20px;
+      padding: 24px;
+      border: 1px solid #E2E8F0;
+    }
+
+    .info-box.blue {
+      background: linear-gradient(145deg, #F0F9FF 0%, #E0F2FE 100%);
+      border-color: #BAE6FD;
+    }
+
+    .info-box.amber {
+      background: linear-gradient(145deg, #FFFBEB 0%, #FEF3C7 100%);
+      border-color: #FDE68A;
+    }
+
+    .info-box-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-box.blue .info-box-title {
+      color: #0369A1;
+    }
+
+    .info-box.amber .info-box-title {
+      color: #B45309;
+    }
+
+    .hours-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .hours-row strong {
+      font-size: 14px;
+      color: #0F172A;
+      font-family: 'IBM Plex Sans Thai', sans-serif;
+    }
+
+    .gear-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 12.5px;
+      color: #334155;
+    }
+
+    .gear-item {
+      background: rgba(255, 255, 255, 0.85);
+      padding: 8px 12px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Key Features Strip */
+    .features-strip {
+      background: #F1F5F9;
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 36px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .feature-item {
+      background: #FFFFFF;
+      padding: 16px;
+      border-radius: 16px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+
+    .feature-icon {
+      font-size: 26px;
+      margin-bottom: 8px;
+    }
+
+    .feature-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 4px;
+    }
+
+    .feature-desc {
+      font-size: 11px;
+      color: #64748B;
+      line-height: 1.4;
+    }
+
+    /* Important Rules & Policies */
+    .rules-card {
+      background: #FFF1F2;
+      border: 1px solid #FECDD3;
+      border-radius: 20px;
+      padding: 22px 24px;
+      margin-bottom: 36px;
+    }
+
+    .rules-header {
+      font-size: 15px;
+      font-weight: 700;
+      color: #BE123C;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .rules-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      font-size: 12px;
+      color: #881337;
+      line-height: 1.5;
+    }
+
+    .rule-bullet {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .rule-bullet span:first-child {
+      font-weight: bold;
+    }
+
+    /* Call to Action & QR Code Footer */
+    .cta-footer {
+      background: linear-gradient(135deg, #0A2239 0%, #0F3D5C 100%);
+      color: #FFFFFF;
+      border-radius: 22px;
+      padding: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .cta-content h3 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #FFFFFF;
+      margin-bottom: 6px;
+    }
+
+    .cta-content p {
+      font-size: 13px;
+      color: #94A3B8;
+      margin-bottom: 14px;
+      max-width: 480px;
+      line-height: 1.6;
+    }
+
+    .cta-url-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px dashed rgba(212, 175, 55, 0.6);
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 14px;
+      color: #F3E5AB;
+    }
+
+    .qr-side {
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .qr-box {
+      width: 110px;
+      height: 110px;
+      background: #FFFFFF;
+      border-radius: 16px;
+      padding: 8px;
+      margin-bottom: 6px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qr-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .qr-caption {
+      font-size: 11px;
+      color: #CBD5E1;
+      font-weight: 500;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: #FFFFFF;
+        padding: 0;
+      }
+      .action-bar {
+        display: none !important;
+      }
+      .poster {
+        box-shadow: none;
+        border-radius: 0;
+        max-width: 100%;
+      }
+      .poster-header {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .cta-footer {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .steps-grid {
+        grid-template-columns: 1fr;
+      }
+      .two-col-grid {
+        grid-template-columns: 1fr;
+      }
+      .features-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .rules-list {
+        grid-template-columns: 1fr;
+      }
+      .cta-footer {
+        flex-direction: column;
+        text-align: center;
+      }
+      .cta-url-box {
+        justify-content: center;
+      }
+      .main-title {
+        font-size: 24px;
+      }
+      .poster-body {
+        padding: 24px 18px;
+      }
+      .poster-header {
+        padding: 28px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Action Bar -->
+  <div class="action-bar">
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <a href="./" class="btn btn-outline">
+        <span>← กลับสู่หน้าเว็บจองห้อง</span>
+      </a>
+      <span style="color: #94A3B8; font-size: 13px;">แผ่นพับ & โปสเตอร์แนะนำระบบฉบับทางการ</span>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button onclick="window.print()" class="btn btn-gold">
+        <span>🖨️ พิมพ์ / บันทึกเป็น PDF (A4)</span>
+      </button>
+      <a href="./infographic-poster.jpg" download="WTK-Music-Studio-Poster.jpg" class="btn btn-outline">
+        <span>📥 ดาวน์โหลดรูปโปสเตอร์ 3D</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Main Printable Infographic Poster -->
+  <main class="poster">
+    
+    <!-- 1. Header Banner -->
+    <header class="poster-header">
+      <div class="header-top">
+        <div class="logo-container">
+          <img src="./logo.png" alt="ตราสัญลักษณ์ วทก.">
+        </div>
+        <div>
+          <div class="org-title">ชมรมดนตรีสากล วทก. • WTK MUSIC STUDIO</div>
+          <div class="college-name">วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก (วทก.)</div>
+        </div>
+      </div>
+
+      <div class="main-title-badge">
+        <span>⚡ ระบบบริการออนไลน์ 100% ฟรี สำหรับนักศึกษาและบุคลากร</span>
+      </div>
+      <h1 class="main-title">ระบบจองห้องซ้อมดนตรีออนไลน์</h1>
+      <p class="sub-title">
+        จองง่าย รู้ผลทันที เช็คสถานะห้องว่างแบบเรียลไทม์ ป้องกันคิวชน พร้อมระบบเช็คอินด้วย QR Code ผ่านมือถือ 24 ชั่วโมง
+      </p>
+    </header>
+
+    <!-- 2. 3D Key Visual Showcase Banner -->
+    <div class="showcase-banner">
+      <img src="./infographic-banner.jpg" alt="ระบบจองห้องซ้อมดนตรี วทก. Key Presentation Banner">
+      <div class="banner-overlay">
+        <div class="banner-text">
+          <span class="banner-tag">NEW WEB APP</span>
+          <span>รองรับมือถือ แท็บเล็ต และคอมพิวเตอร์ทุกแพลตฟอร์ม</span>
+          <span>•</span>
+          <span>ระบบปลอดภัยด้วย Cloud Google Apps Script & Sheets</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Body Content -->
+    <div class="poster-body">
+
+      <!-- Section: 3-Step Easy Booking -->
+      <section>
+        <div class="section-header">
+          <div class="section-icon">1</div>
+          <div>
+            <h2 class="section-title">3 ขั้นตอนง่ายๆ ในการจองห้องซ้อม</h2>
+            <p class="section-subtitle">สะดวก รวดเร็ว ไม่ต้องติดต่อแอดมินให้ยุ่งยาก รู้คิวทันทีใน 1 นาที</p>
+          </div>
+        </div>
+
+        <div class="steps-grid">
+          <!-- Step 1 -->
+          <div class="step-card">
+            <div class="step-number">01</div>
+            <div>
+              <div class="step-icon">🗓️</div>
+              <h3 class="step-title">เลือกวันและช่วงเวลา</h3>
+              <p class="step-desc">
+                เปิดหน้าปฏิทิน เช็คคิวว่างล่วงหน้าได้ 14 วัน เลือกระยะเวลาซ้อมตามต้องการ (สูงสุด 3 ชม./ครั้ง)
+              </p>
+            </div>
+            <div>
+              <span class="step-highlight">มีแถบสีบอกสถานะความว่าง</span>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="step-card">
+            <div class="step-number">02</div>
+            <div>
+              <div class="step-icon">✍️</div>
+              <h3 class="step-title">กรอกข้อมูลผู้ขอใช้งาน</h3>
+              <p class="step-desc">
+                ระบุชื่อ-สกุล, ชั้นปี, สาขาวิชา, จำนวนสมาชิก และระบุสาเหตุหรือวัตถุประสงค์ในการขอใช้ห้อง
+              </p>
+            </div>
+            <div>
+              <span class="step-highlight">แนะนำให้ระบุอีเมลเพื่อรับคีย์การ์ด</span>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="step-card">
+            <div class="step-number">03</div>
+            <div>
+              <div class="step-icon">🎫</div>
+              <h3 class="step-title">รับรหัสจอง & QR Code</h3>
+              <p class="step-desc">
+                ระบบออกรหัสการจอง (เช่น MB-2609-XXXX) และบัตรคิวอิเล็กทรอนิกส์ จัดส่งไปยังอีเมลพร้อมใช้งาน
+              </p>
+            </div>
+            <div>
+              <span class="step-highlight">นำรหัสไปใช้เช็คอินได้ทันที</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Operating Hours & Studio Gear -->
+      <section class="two-col-grid">
+        <!-- Operating Hours Box -->
+        <div class="info-box blue">
+          <h3 class="info-box-title">
+            <span>⏰</span>
+            <span>เวลาเปิดให้บริการประจำสัปดาห์</span>
+          </h3>
+          
+          <div class="hours-row">
+            <span>วันธรรมดา (จันทร์ - ศุกร์)</span>
+            <strong>16:30 - 20:00 น.</strong>
+          </div>
+
+          <div class="hours-row">
+            <span>วันหยุด (เสาร์ - อาทิตย์)</span>
+            <strong>09:00 - 20:00 น.</strong>
+          </div>
+
+          <div class="hours-row" style="background: rgba(3, 105, 161, 0.1); border: 1px dashed rgba(3, 105, 161, 0.3);">
+            <span>ระยะเวลาจองต่อครั้ง</span>
+            <strong style="color: #0369A1;">สูงสุด 3 ชั่วโมง / ครั้ง</strong>
+          </div>
+        </div>
+
+        <!-- Studio Gear Box -->
+        <div class="info-box amber">
+          <h3 class="info-box-title">
+            <span>🎸</span>
+            <span>เครื่องดนตรีและอุปกรณ์ในห้อง</span>
+          </h3>
+
+          <div class="gear-list">
+            <div class="gear-item"><span>🥁</span> กลองชุด Pearl ครบชุด</div>
+            <div class="gear-item"><span>🎸</span> แอมป์กีตาร์ Marshall</div>
+            <div class="gear-item"><span>🔊</span> แอมป์เบส Fender</div>
+            <div class="gear-item"><span>🎹</span> คีย์บอร์ด Roland</div>
+            <div class="gear-item"><span>🎙️</span> ไมโครโฟน Shure x2</div>
+            <div class="gear-item"><span>🎛️</span> ระบบเสียง PA System</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: 4 Core Features -->
+      <section class="features-strip">
+        <div class="section-header" style="margin-bottom: 16px;">
+          <div class="section-icon">★</div>
+          <div>
+            <h3 class="section-title" style="font-size: 17px;">ฟีเจอร์เด่นเพื่อความสะดวกสูงสุด</h3>
+          </div>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-item">
+            <div class="feature-icon">🛡️</div>
+            <h4 class="feature-title">ป้องกันคิวซ้อน 100%</h4>
+            <p class="feature-desc">ระบบบล็อกคิวทับซ้อนอัตโนมัติทั้งฝั่งหน้าเว็บและฐานข้อมูล</p>
+          </div>
+
+          <div class="feature-item">
+            <div class="feature-icon">📱</div>
+            <h4 class="feature-title">เช็คอินด้วย QR Code</h4>
+            <p class="feature-desc">สแกนรหัสผ่านมือถือเพื่อยืนยันเข้าห้องได้รวดเร็วใน 3 วินาที</p>
+          </div>
+
+          <div class="feature-item">
+            <div class="feature-icon">📧</div>
+            <h4 class="feature-title">แจ้งเตือนผ่านอีเมล</h4>
+            <p class="feature-desc">ส่งรหัสห้อง รหัสจอง และบัตรคิวเข้าอีเมลทันทีที่ได้รับการอนุมัติ</p>
+          </div>
+
+          <div class="feature-item">
+            <div class="feature-icon">⚡</div>
+            <h4 class="feature-title">เปิดคิว 0 ms ทันใจ</h4>
+            <p class="feature-desc">โหลดข้อมูลปฏิทินทันทีผ่านระบบ Smart Cache ไม่ต้องรอโหลดนาน</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Essential Rules -->
+      <section class="rules-card">
+        <div class="rules-header">
+          <span>⚠️</span>
+          <span>ข้อปฏิบัติสำคัญในการใช้ห้องซ้อมดนตรี วทก.</span>
+        </div>
+        <div class="rules-list">
+          <div class="rule-bullet">
+            <span>•</span>
+            <span><strong>การเช็คอิน:</strong> ต้องเช็คอินภายใน 30 นาทีหลังเวลาเริ่มจอง มิฉะนั้นระบบจะยกเลิกคิว (No-show) เพื่อเปิดสิทธิ์ให้ผู้อื่น</span>
+          </div>
+          <div class="rule-bullet">
+            <span>•</span>
+            <span><strong>การรักษาความสะอาด:</strong> ห้ามนำอาหารและเครื่องดื่มทุกชนิดเข้าห้องซ้อมเด็ดขาด (อนุญาตเฉพาะน้ำเปล่ามีฝาปิด)</span>
+          </div>
+          <div class="rule-bullet">
+            <span>•</span>
+            <span><strong>การคืนห้อง:</strong> ต้องกดปุ่ม "คืนห้อง" หรือสแกน QR คืนห้องเมื่อซ้อมเสร็จสิ้น เพื่อบันทึกเวลาจริง</span>
+          </div>
+          <div class="rule-bullet">
+            <span>•</span>
+            <span><strong>ความปลอดภัย:</strong> ปิดสวิตช์เครื่องขยายเสียง แอมป์ แอร์ และไฟทุกดวงก่อนออกจากห้องซ้อม</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Call To Action & Live URL -->
+      <footer class="cta-footer">
+        <div class="cta-content">
+          <h3>พร้อมซ้อมดนตรีแล้วหรือยัง?</h3>
+          <p>
+            เข้าใช้งานผ่านเว็บเบราว์เซอร์ได้ทันทีโดยไม่ต้องติดตั้งแอปพลิเคชัน รองรับทั้งสมาร์ทโฟน iOS, Android และคอมพิวเตอร์
+          </p>
+          <div class="cta-url-box">
+            <span>🔗 URL:</span>
+            <strong>masterphum07-web.github.io/MUSIC-PI/</strong>
+          </div>
+        </div>
+
+        <div class="qr-side">
+          <div class="qr-box">
+            <!-- QR Code pointing to live site via Google Charts API -->
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://masterphum07-web.github.io/MUSIC-PI/&margin=2" alt="QR Code สแกนเข้าเว็บจองห้องซ้อม">
+          </div>
+          <div class="qr-caption">สแกนเพื่อเข้าใช้งานทันที</div>
+        </div>
+      </footer>
+
+      <!-- Bottom Credits -->
+      <div style="text-align: center; margin-top: 24px; font-size: 11.5px; color: #94A3B8;">
+        ชมรมดนตรี วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก (วทก.) • พัฒนาด้วยเทคโนโลยี React + Tailwind CSS + Google Apps Script
+      </div>
+
+    </div>
+  </main>
+
+</body>
+</html>

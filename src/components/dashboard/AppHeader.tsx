@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CalendarPlus, LogIn, LogOut, KeyRound } from 'lucide-react';
+import { Clock, CalendarPlus, LogIn, LogOut, KeyRound, Sparkles } from 'lucide-react';
 import { Button } from '@/components/common/Button';
 import dayjs from 'dayjs';
 
@@ -7,12 +7,14 @@ export interface AppHeaderProps {
   onOpenBooking: () => void;
   onOpenCheckIn: (tab?: 'checkin' | 'checkout' | 'lookup') => void;
   onOpenAdmin: () => void;
+  onOpenInfographic?: () => void;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenBooking,
   onOpenCheckIn,
   onOpenAdmin,
+  onOpenInfographic,
 }) => {
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDate, setCurrentDate] = useState<string>('');
@@ -97,6 +99,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 <LogOut className="w-3.5 h-3.5 mr-1 text-amber-600" />
                 <span>คืนห้อง</span>
               </button>
+
+              {/* Infographic Poster Link */}
+              {onOpenInfographic && (
+                <button
+                  onClick={onOpenInfographic}
+                  className="hidden sm:inline-flex items-center justify-center font-bold text-xs px-2.5 sm:px-3 py-1.5 rounded-xl border border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100 shadow-sm transition-all"
+                  title="ดูแผ่นพับ & โปสเตอร์แนะนำระบบ (A4 / ภาพ 3D)"
+                >
+                  <Sparkles className="w-3.5 h-3.5 mr-1 text-sky-600" />
+                  <span>แนะนำระบบ</span>
+                </button>
+              )}
 
               {/* Admin Console Link */}
               <button

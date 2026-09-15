@@ -9,6 +9,7 @@ import { BookingSuccessModal } from '@/components/booking/BookingSuccessModal';
 import { DirectApprovalModal } from '@/components/booking/DirectApprovalModal';
 import { CheckInOutModal } from '@/components/checkin/CheckInOutModal';
 import { AdminLoginModal } from '@/components/admin/AdminLoginModal';
+import { InfographicModal } from '@/components/dashboard/InfographicModal';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { OfflineBanner } from '@/components/common/OfflineBanner';
 import { Booking, PublicState, AdminUser } from '@/types';
@@ -43,6 +44,7 @@ function AppContent() {
   const [checkInOutTab, setCheckInOutTab] = useState<'checkin' | 'checkout' | 'lookup'>('checkin');
   const [initialBookingCode, setInitialBookingCode] = useState<string>('');
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [isInfographicOpen, setIsInfographicOpen] = useState(false);
   const [publicState, setPublicState] = useState<PublicState | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -221,7 +223,18 @@ function AppContent() {
         onSelectBookingDetail={handleSelectBookingDetail}
         refreshTrigger={refreshTrigger}
         onStateLoaded={handleStateLoaded}
-        isModalActive={isBookingOpen || isCheckInOutOpen || isAdminLoginOpen || isSuccessOpen || !!selectedBooking}
+        isModalActive={isBookingOpen || isCheckInOutOpen || isAdminLoginOpen || isSuccessOpen || isInfographicOpen || !!selectedBooking}
+        onOpenInfographic={() => setIsInfographicOpen(true)}
+      />
+
+      {/* 0. Infographic Modal แผ่นพับ & โปสเตอร์แนะนำระบบ */}
+      <InfographicModal
+        isOpen={isInfographicOpen}
+        onClose={() => setIsInfographicOpen(false)}
+        onOpenBooking={() => {
+          setIsInfographicOpen(false);
+          handleOpenBooking();
+        }}
       />
 
       {/* 1. Modal ฟอร์มจองห้องซ้อมดนตรี (Phase 7) */}

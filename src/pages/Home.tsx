@@ -29,6 +29,7 @@ export interface HomeProps {
   refreshTrigger?: number;
   onStateLoaded?: (state: PublicState) => void;
   isModalActive?: boolean;
+  onOpenInfographic?: () => void;
 }
 
 // ข้อมูลเริ่มต้นสำหรับแสดงผลทันทีแบบ 0 ms ไม่ต้องรอโหลดหน้าจอเปล่า
@@ -97,6 +98,7 @@ export const Home: React.FC<HomeProps> = ({
   refreshTrigger,
   onStateLoaded,
   isModalActive = false,
+  onOpenInfographic,
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>(() => dayjs().format('YYYY-MM-DD'));
   const [state, setState] = useState<PublicState>(() => getInitialState(dayjs().format('YYYY-MM-DD')));
@@ -236,6 +238,7 @@ export const Home: React.FC<HomeProps> = ({
           onOpenBooking={() => onOpenBookingModal({ date: selectedDate })}
           onOpenCheckIn={onOpenCheckInOutModal}
           onOpenAdmin={onOpenAdminLogin}
+          onOpenInfographic={onOpenInfographic}
         />
 
         {/* 2. Announcement Bar */}
