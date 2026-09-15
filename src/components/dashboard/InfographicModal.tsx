@@ -32,46 +32,35 @@ export const InfographicModal: React.FC<InfographicModalProps> = ({
       description="คู่มือและรายละเอียดการใช้งานระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก."
     >
       <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-1 -mr-1">
-        {/* Top 3D Visual Banner */}
-        <div className="relative rounded-2xl overflow-hidden shadow-md border border-slate-200 group">
+        {/* Top 16:9 Real System Infographic Preview */}
+        <div className="relative rounded-2xl overflow-hidden shadow-md border border-slate-200 group bg-slate-900">
           <img
-            src={`${import.meta.env.BASE_URL}infographic-banner.jpg`}
-            alt="ระบบจองห้องซ้อมดนตรี วทก. Key Visual Banner"
-            className="w-full h-48 sm:h-64 object-cover object-center group-hover:scale-105 transition-transform duration-500"
+            src={`${import.meta.env.BASE_URL}wtk_infographic_16_9.png`}
+            alt="ภาพอินโฟกราฟฟิกแนะนำระบบจองห้องซ้อมดนตรี วทก. 16:9"
+            className="w-full h-auto aspect-video object-contain group-hover:scale-[1.02] transition-transform duration-300"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent flex flex-col justify-end p-4 sm:p-5 text-white">
-            <div className="inline-flex items-center gap-1.5 bg-secondary/90 backdrop-blur-md px-2.5 py-0.5 rounded-md text-[11px] font-bold text-white w-fit mb-1.5 border border-white/20">
-              <span>WTK MUSIC STUDIO</span>
-            </div>
-            <h3 className="text-base sm:text-xl font-extrabold text-white leading-tight drop-shadow-md">
-              ระบบจองห้องซ้อมดนตรี ชมรมดนตรี วทก.
-            </h3>
-            <p className="text-xs text-slate-200 mt-0.5 line-clamp-2">
-              ตรวจสอบคิวว่างสด จองง่ายใน 3 ขั้นตอน พร้อมระบบเช็คอิน QR Code สะดวก รวดเร็ว 100% ฟรี
-            </p>
-          </div>
         </div>
 
         {/* Action Buttons Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <a
+              href={`${import.meta.env.BASE_URL}wtk_infographic_16_9_8k.png`}
+              download="WTK-Music-Studio-Infographic-16x9-8K.png"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-xs font-bold text-slate-950 transition-all shadow-xs"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-950" />
+              <span>ดาวน์โหลด 16:9 (8K Ultra HD)</span>
+            </a>
             <Button
-              variant="gold"
+              variant="outline"
               size="sm"
               onClick={handlePrint}
               className="text-xs font-bold shadow-sm"
             >
-              <Printer className="w-4 h-4 mr-1.5 text-amber-950" />
-              <span>เปิดหน้าพิมพ์โปสเตอร์ A4 (Print / PDF)</span>
+              <Printer className="w-4 h-4 mr-1.5 text-slate-700" />
+              <span>เปิดหน้าพิมพ์ A4 (Print / PDF)</span>
             </Button>
-            <a
-              href={`${import.meta.env.BASE_URL}infographic-poster.jpg`}
-              download="WTK-Music-Studio-Poster.jpg"
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 transition-all shadow-xs"
-            >
-              <Download className="w-3.5 h-3.5 text-secondary" />
-              <span>โหลดภาพโปสเตอร์ 3D</span>
-            </a>
           </div>
 
           <a
