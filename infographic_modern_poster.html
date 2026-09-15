@@ -1,0 +1,979 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1200, height=1600, initial-scale=1.0">
+  <title>ระบบจองห้องซ้อมดนตรีออนไลน์ วทก. — Infographic Poster</title>
+  
+  <!-- Google Fonts: Prompt & IBM Plex Sans Thai -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 1200px;
+      height: 1600px;
+      margin: 0;
+      padding: 0;
+      background: #061527;
+      font-family: 'Prompt', sans-serif;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Main Poster Canvas */
+    .poster-canvas {
+      width: 1200px;
+      height: 1600px;
+      background: radial-gradient(circle at 50% 10%, #0D2C4D 0%, #081B30 40%, #040E1A 100%);
+      padding: 50px 60px 40px 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    /* Subtle Background Elements */
+    .bg-grid {
+      position: absolute;
+      top: 40px;
+      right: 60px;
+      width: 140px;
+      height: 140px;
+      background-image: radial-gradient(rgba(56, 189, 248, 0.25) 2px, transparent 2px);
+      background-size: 16px 16px;
+      pointer-events: none;
+    }
+
+    .bg-glow-center {
+      position: absolute;
+      top: 380px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(14, 165, 233, 0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .bg-icon-left {
+      position: absolute;
+      top: 140px;
+      left: 40px;
+      opacity: 0.12;
+      pointer-events: none;
+    }
+
+    .bg-icon-right {
+      position: absolute;
+      top: 180px;
+      right: 50px;
+      opacity: 0.12;
+      pointer-events: none;
+    }
+
+    /* 1. Header Section */
+    .header-section {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .top-pill {
+      background: rgba(14, 165, 233, 0.15);
+      border: 1.5px solid rgba(56, 189, 248, 0.4);
+      padding: 8px 24px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: #E0F2FE;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(14, 165, 233, 0.2);
+    }
+
+    .top-pill-icon {
+      width: 24px;
+      height: 24px;
+      background: #0284C7;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    .main-title-h1 {
+      font-size: 64px;
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+      color: #FFFFFF;
+      text-shadow: 0 4px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .main-title-gradient {
+      background: linear-gradient(135deg, #38BDF8 0%, #60A5FA 50%, #93C5FD 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .bullets-subline {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 19px;
+      font-weight: 600;
+      color: #E2E8F0;
+      margin-top: 14px;
+      margin-bottom: 22px;
+    }
+
+    .bullet-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #38BDF8;
+      display: inline-block;
+    }
+
+    .tech-pill {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1.5px solid rgba(52, 211, 153, 0.4);
+      padding: 7px 20px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: #A7F3D0;
+      font-size: 15px;
+      font-weight: 700;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+    }
+
+    /* 2. Hero 3D Laptop + Feature Buttons Section */
+    .hero-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 30px;
+      margin-top: 25px;
+      margin-bottom: 25px;
+      z-index: 10;
+    }
+
+    /* 3D Angled Laptop */
+    .laptop-wrapper {
+      width: 820px;
+      position: relative;
+      perspective: 1200px;
+    }
+
+    .laptop-body {
+      background: #0D1624;
+      border-radius: 18px 18px 4px 4px;
+      border: 3px solid #334155;
+      padding: 12px 12px 18px 12px;
+      box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7), 0 0 40px rgba(14, 165, 233, 0.15);
+      position: relative;
+    }
+
+    .camera-dot {
+      width: 6px;
+      height: 6px;
+      background: #475569;
+      border-radius: 50%;
+      margin: 0 auto 8px auto;
+    }
+
+    /* Custom Music Studio Dashboard Inside Laptop */
+    .dashboard-screen {
+      background: #F8FAFC;
+      border-radius: 10px;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 210px 1fr;
+      height: 420px;
+      color: #0F172A;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    /* Screen Sidebar */
+    .dash-sidebar {
+      background: #091E33;
+      color: #FFFFFF;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .dash-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .dash-logo-icon {
+      width: 28px;
+      height: 28px;
+      background: #0284C7;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .dash-brand-title {
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #FFFFFF;
+    }
+    .dash-brand-sub {
+      font-size: 9px;
+      color: #94A3B8;
+    }
+
+    .dash-menu {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .dash-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #94A3B8;
+    }
+
+    .dash-menu-item.active {
+      background: rgba(14, 165, 233, 0.2);
+      color: #38BDF8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .dash-user-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .dash-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #D4AF37;
+      color: #1A1300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .dash-user-name {
+      font-size: 10px;
+      font-weight: 700;
+      color: #E2E8F0;
+      line-height: 1.2;
+    }
+    .dash-user-role {
+      font-size: 8.5px;
+      color: #64748B;
+    }
+
+    /* Screen Main Area */
+    .dash-main {
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: #F1F5F9;
+    }
+
+    .dash-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .dash-heading-h3 {
+      font-size: 14px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .dash-date-badge {
+      font-size: 9.5px;
+      color: #64748B;
+    }
+
+    .dash-status-pill {
+      background: #DCFCE7;
+      color: #166534;
+      font-size: 9.5px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* 4 Stat Cards */
+    .dash-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .stat-card {
+      background: #FFFFFF;
+      border-radius: 10px;
+      padding: 10px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    }
+
+    .stat-val-text {
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 1;
+      color: #0F172A;
+      margin-bottom: 2px;
+    }
+    .stat-lbl-text {
+      font-size: 9px;
+      font-weight: 600;
+      color: #64748B;
+    }
+
+    .stat-icon-chip {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    .bg-blue-chip { background: #0284C7; color: #FFFFFF; }
+    .bg-amber-chip { background: #F59E0B; color: #FFFFFF; }
+    .bg-rose-chip { background: #E11D48; color: #FFFFFF; }
+    .bg-emerald-chip { background: #10B981; color: #FFFFFF; }
+
+    /* 2 Charts Grid */
+    .dash-charts-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 10px;
+      flex-grow: 1;
+    }
+
+    .chart-box {
+      background: #FFFFFF;
+      border-radius: 10px;
+      padding: 10px 12px;
+      border: 1px solid #E2E8F0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .chart-title {
+      font-size: 10px;
+      font-weight: 800;
+      color: #0F172A;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chart-svg-wrap {
+      width: 100%;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Laptop Base Deck */
+    .laptop-base {
+      height: 14px;
+      background: linear-gradient(to bottom, #94A3B8 0%, #64748B 50%, #475569 100%);
+      border-radius: 0 0 16px 16px;
+      position: relative;
+      box-shadow: 0 16px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .laptop-notch {
+      width: 110px;
+      height: 6px;
+      background: #334155;
+      border-radius: 0 0 6px 6px;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .laptop-reflection {
+      position: absolute;
+      bottom: -22px;
+      left: 5%;
+      width: 90%;
+      height: 20px;
+      background: radial-gradient(ellipse at center, rgba(14, 165, 233, 0.3) 0%, transparent 80%);
+      filter: blur(8px);
+      pointer-events: none;
+    }
+
+    /* Right Vertical Feature Buttons Stack */
+    .feature-buttons-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 220px;
+    }
+
+    .feature-btn-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #FFFFFF;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+    }
+
+    .btn-icon-sq {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .btn-blue { background: linear-gradient(135deg, rgba(2, 132, 199, 0.9) 0%, rgba(3, 105, 161, 0.8) 100%); }
+    .btn-blue .btn-icon-sq { background: #0369A1; }
+
+    .btn-cyan { background: linear-gradient(135deg, rgba(14, 165, 233, 0.9) 0%, rgba(2, 132, 199, 0.8) 100%); }
+    .btn-cyan .btn-icon-sq { background: #0284C7; }
+
+    .btn-purple { background: linear-gradient(135deg, rgba(147, 51, 234, 0.9) 0%, rgba(126, 34, 206, 0.8) 100%); }
+    .btn-purple .btn-icon-sq { background: #7E22CE; }
+
+    .btn-orange { background: linear-gradient(135deg, rgba(249, 115, 22, 0.9) 0%, rgba(194, 65, 12, 0.8) 100%); }
+    .btn-orange .btn-icon-sq { background: #C2410C; }
+
+    .btn-emerald { background: linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.8) 100%); }
+    .btn-emerald .btn-icon-sq { background: #059669; }
+
+    .btn-rose { background: linear-gradient(135deg, rgba(225, 29, 72, 0.9) 0%, rgba(190, 18, 60, 0.8) 100%); }
+    .btn-rose .btn-icon-sq { background: #BE123C; }
+
+    /* 3. Bottom 4 Feature Cards (Glassmorphism Container) */
+    .bottom-features-box {
+      background: rgba(15, 30, 48, 0.7);
+      border: 1.5px solid rgba(56, 189, 248, 0.3);
+      border-radius: 24px;
+      padding: 24px 28px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+      z-index: 10;
+    }
+
+    .bottom-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .card-circle-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    }
+
+    .icon-bg-1 { background: #0284C7; }
+    .icon-bg-2 { background: #6366F1; }
+    .icon-bg-3 { background: #0D9488; }
+    .icon-bg-4 { background: #10B981; }
+
+    .card-text-wrap h4 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #FFFFFF;
+      margin-bottom: 4px;
+      line-height: 1.25;
+    }
+
+    .card-text-wrap p {
+      font-size: 12px;
+      color: #94A3B8;
+      line-height: 1.45;
+    }
+
+    /* 4. Slogan & Footer */
+    .slogan-text {
+      text-align: center;
+      font-size: 16px;
+      font-weight: 600;
+      color: #38BDF8;
+      margin-top: 14px;
+      margin-bottom: 12px;
+      z-index: 10;
+    }
+
+    .footer-bar {
+      background: rgba(10, 25, 42, 0.9);
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .footer-logo {
+      width: 44px;
+      height: 44px;
+      background: #FFFFFF;
+      border-radius: 12px;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .footer-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .footer-college-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: #E2E8F0;
+    }
+    .footer-club-text {
+      font-size: 12px;
+      color: #38BDF8;
+      font-weight: 700;
+    }
+
+    .footer-qr-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-qr-text {
+      text-align: right;
+    }
+    .qr-text-top {
+      font-size: 12px;
+      font-weight: 700;
+      color: #FDE047;
+    }
+    .qr-text-url {
+      font-family: monospace;
+      font-size: 11px;
+      color: #94A3B8;
+    }
+
+    .footer-qr-img {
+      width: 48px;
+      height: 48px;
+      background: #FFFFFF;
+      border-radius: 8px;
+      padding: 3px;
+    }
+    .footer-qr-img img {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <main class="poster-canvas">
+    
+    <!-- Background Decor -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow-center"></div>
+
+    <!-- 1. Header Section -->
+    <header class="header-section">
+      <div class="top-pill">
+        <div class="top-pill-icon">🎸</div>
+        <span>ระบบที่เข้าใจการจองห้องซ้อมดนตรีของนักศึกษา</span>
+      </div>
+
+      <h1 class="main-title-h1">
+        ระบบจองห้องซ้อม<br>
+        <span class="main-title-gradient">ดนตรีออนไลน์ วทก.</span>
+      </h1>
+
+      <div class="bullets-subline">
+        <span>เช็คคิวว่างสด</span>
+        <span class="bullet-dot"></span>
+        <span>จองง่ายใน 1 นาที</span>
+        <span class="bullet-dot"></span>
+        <span>เช็คอินด้วย QR Code</span>
+        <span class="bullet-dot"></span>
+        <span>ป้องกันคิวซ้อน 100%</span>
+      </div>
+
+      <div class="tech-pill">
+        <span>⚡ Web App Script + Google Sheets สำหรับ วทก.</span>
+      </div>
+    </header>
+
+    <!-- 2. Hero 3D Laptop + Feature Stack Section -->
+    <section class="hero-container">
+      
+      <!-- 3D Laptop Mockup -->
+      <div class="laptop-wrapper">
+        <div class="laptop-body">
+          <div class="camera-dot"></div>
+          
+          <!-- Modern Dashboard Inside Screen -->
+          <div class="dashboard-screen">
+            
+            <!-- Sidebar -->
+            <div class="dash-sidebar">
+              <div>
+                <div class="dash-brand">
+                  <div class="dash-logo-icon">🎵</div>
+                  <div>
+                    <div class="dash-brand-title">WTK MUSIC STUDIO</div>
+                    <div class="dash-brand-sub">ชมรมดนตรีสากล วทก.</div>
+                  </div>
+                </div>
+
+                <ul class="dash-menu">
+                  <li class="dash-menu-item active">
+                    <span>📊</span>
+                    <span>Dashboard ผู้ใช้</span>
+                  </li>
+                  <li class="dash-menu-item">
+                    <span>🗓️</span>
+                    <span>ปฏิทินสถานะว่าง</span>
+                  </li>
+                  <li class="dash-menu-item">
+                    <span>⚡</span>
+                    <span>จองห้องซ้อมด่วน</span>
+                  </li>
+                  <li class="dash-menu-item">
+                    <span>🎫</span>
+                    <span>บัตรคิวดิจิทัล</span>
+                  </li>
+                  <li class="dash-menu-item">
+                    <span>🟢</span>
+                    <span>เช็คอิน & คืนห้อง</span>
+                  </li>
+                  <li class="dash-menu-item">
+                    <span>🎸</span>
+                    <span>เครื่องดนตรีประจำห้อง</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="dash-user-card">
+                <div class="dash-avatar">ว</div>
+                <div>
+                  <div class="dash-user-name">นักศึกษา / บุคลากร</div>
+                  <div class="dash-user-role">วทก. สาธารณสุข</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Main Area -->
+            <div class="dash-main">
+              <!-- Top bar -->
+              <div class="dash-topbar">
+                <div>
+                  <h3 class="dash-heading-h3">Dashboard ภาพรวมห้องซ้อม ROOM-01</h3>
+                  <div class="dash-date-badge">อัปเดตล่าสุดเรียลไทม์ • พร้อมใช้งาน 24 ชั่วโมง</div>
+                </div>
+                <div class="dash-status-pill">
+                  <span>🟢</span>
+                  <span>เปิดบริการ 16:30 - 20:00 น.</span>
+                </div>
+              </div>
+
+              <!-- 4 Stat Cards -->
+              <div class="dash-stats-grid">
+                <div class="stat-card">
+                  <div>
+                    <div class="stat-val-text">12</div>
+                    <div class="stat-lbl-text">คิวจองสัปดาห์นี้</div>
+                  </div>
+                  <div class="stat-icon-chip bg-blue-chip">📅</div>
+                </div>
+
+                <div class="stat-card">
+                  <div>
+                    <div class="stat-val-text">1</div>
+                    <div class="stat-lbl-text">ห้องซ้อมพร้อมใช้</div>
+                  </div>
+                  <div class="stat-icon-chip bg-amber-chip">🎸</div>
+                </div>
+
+                <div class="stat-card">
+                  <div>
+                    <div class="stat-val-text">3 ชม.</div>
+                    <div class="stat-lbl-text">จองได้สูงสุด/ครั้ง</div>
+                  </div>
+                  <div class="stat-icon-chip bg-rose-chip">⏰</div>
+                </div>
+
+                <div class="stat-card">
+                  <div>
+                    <div class="stat-val-text">100%</div>
+                    <div class="stat-lbl-text">ป้องกันคิวซ้อน</div>
+                  </div>
+                  <div class="stat-icon-chip bg-emerald-chip">🛡️</div>
+                </div>
+              </div>
+
+              <!-- 2 Charts Grid -->
+              <div class="dash-charts-grid">
+                
+                <!-- Line Chart: Usage Trends -->
+                <div class="chart-box">
+                  <div class="chart-title">
+                    <span>📈 แนวโน้มการเข้าใช้งานห้องซ้อม</span>
+                    <span style="font-size: 8px; color: #0284C7; background: #E0F2FE; padding: 2px 6px; border-radius: 4px;">รายสัปดาห์</span>
+                  </div>
+                  <div class="chart-svg-wrap">
+                    <svg viewBox="0 0 280 110" width="100%" height="100%">
+                      <defs>
+                        <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stop-color="#0284C7" stop-opacity="0.4"/>
+                          <stop offset="100%" stop-color="#0284C7" stop-opacity="0.0"/>
+                        </linearGradient>
+                      </defs>
+                      <!-- Grid lines -->
+                      <line x1="20" y1="20" x2="270" y2="20" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="3,3"/>
+                      <line x1="20" y1="50" x2="270" y2="50" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="3,3"/>
+                      <line x1="20" y1="80" x2="270" y2="80" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="3,3"/>
+                      <!-- Area & Line -->
+                      <path d="M 30,85 Q 70,30 110,65 T 190,35 T 260,20 L 260,95 L 30,95 Z" fill="url(#blueGrad)"/>
+                      <path d="M 30,85 Q 70,30 110,65 T 190,35 T 260,20" fill="none" stroke="#0284C7" stroke-width="3" stroke-linecap="round"/>
+                      <!-- Points -->
+                      <circle cx="30" cy="85" r="4" fill="#0284C7" stroke="#FFF" stroke-width="2"/>
+                      <circle cx="110" cy="65" r="4" fill="#0284C7" stroke="#FFF" stroke-width="2"/>
+                      <circle cx="190" cy="35" r="4" fill="#0284C7" stroke="#FFF" stroke-width="2"/>
+                      <circle cx="260" cy="20" r="5" fill="#D4AF37" stroke="#FFF" stroke-width="2"/>
+                      <!-- Labels -->
+                      <text x="30" y="105" font-size="8" fill="#94A3B8" text-anchor="middle">จ.</text>
+                      <text x="75" y="105" font-size="8" fill="#94A3B8" text-anchor="middle">อ.</text>
+                      <text x="120" y="105" font-size="8" fill="#94A3B8" text-anchor="middle">พ.</text>
+                      <text x="165" y="105" font-size="8" fill="#94A3B8" text-anchor="middle">พฤ.</text>
+                      <text x="210" y="105" font-size="8" fill="#94A3B8" text-anchor="middle">ศ.</text>
+                      <text x="260" y="105" font-size="8" fill="#0284C7" font-weight="bold" text-anchor="middle">ส.-อา.</text>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Donut Chart: Time Slot Breakdown -->
+                <div class="chart-box">
+                  <div class="chart-title">
+                    <span>🍩 สัดส่วนช่วงเวลาซ้อม</span>
+                  </div>
+                  <div class="chart-svg-wrap" style="display: flex; align-items: center; justify-content: space-around;">
+                    <svg viewBox="0 0 100 100" width="80" height="80">
+                      <!-- Donut segments -->
+                      <circle cx="50" cy="50" r="35" fill="transparent" stroke="#0284C7" stroke-width="16" stroke-dasharray="80 140" stroke-dashoffset="0"/>
+                      <circle cx="50" cy="50" r="35" fill="transparent" stroke="#F59E0B" stroke-width="16" stroke-dasharray="55 165" stroke-dashoffset="-80"/>
+                      <circle cx="50" cy="50" r="35" fill="transparent" stroke="#10B981" stroke-width="16" stroke-dasharray="45 175" stroke-dashoffset="-135"/>
+                      <circle cx="50" cy="50" r="35" fill="transparent" stroke="#8B5CF6" stroke-width="16" stroke-dasharray="40 180" stroke-dashoffset="-180"/>
+                    </svg>
+                    <div style="font-size: 7.5px; color: #475569; display: flex; flex-direction: column; gap: 3px;">
+                      <div style="display: flex; align-items: center; gap: 4px;"><span style="width:6px;height:6px;background:#0284C7;border-radius:2px;"></span> 16:30-17:30</div>
+                      <div style="display: flex; align-items: center; gap: 4px;"><span style="width:6px;height:6px;background:#F59E0B;border-radius:2px;"></span> 17:30-18:30</div>
+                      <div style="display: flex; align-items: center; gap: 4px;"><span style="width:6px;height:6px;background:#10B981;border-radius:2px;"></span> 18:30-19:30</div>
+                      <div style="display: flex; align-items: center; gap: 4px;"><span style="width:6px;height:6px;background:#8B5CF6;border-radius:2px;"></span> 19:30-20:00</div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        <div class="laptop-base">
+          <div class="laptop-notch"></div>
+        </div>
+        <div class="laptop-reflection"></div>
+      </div>
+
+      <!-- Right Vertical Feature Buttons -->
+      <div class="feature-buttons-stack">
+        <div class="feature-btn-item btn-blue">
+          <div class="btn-icon-sq">📊</div>
+          <div>Dashboard<br><span style="font-size: 11px; font-weight: 500; opacity: 0.9;">เช็คภาพรวม</span></div>
+        </div>
+
+        <div class="feature-btn-item btn-cyan">
+          <div class="btn-icon-sq">🗓️</div>
+          <div>ปฏิทินสด<br><span style="font-size: 11px; font-weight: 500; opacity: 0.9;">ดูคิวว่าง 14 วัน</span></div>
+        </div>
+
+        <div class="feature-btn-item btn-purple">
+          <div class="btn-icon-sq">⚡</div>
+          <div>จองด่วน 1 คลิก<br><span style="font-size: 11px; font-weight: 500; opacity: 0.9;">รู้ผลทันใจ</span></div>
+        </div>
+
+        <div class="feature-btn-item btn-orange">
+          <div class="btn-icon-sq">🎫</div>
+          <div>บัตรคิวดิจิทัล<br><span style="font-size: 11px; font-weight: 500; opacity: 0.9;">ส่งตรงเข้าเมล</span></div>
+        </div>
+
+        <div class="feature-btn-item btn-emerald">
+          <div class="btn-icon-sq">🟢</div>
+          <div>เช็คอิน & คืนห้อง<br><span style="font-size: 11px; font-weight: 500; opacity: 0.9;">สแกนหน้าห้อง</span></div>
+        </div>
+
+        <div class="feature-btn-item btn-rose">
+          <div class="btn-icon-sq">🎸</div>
+          <div>เครื่องดนตรีโปร<br><span style="font-size: 11px; font-weight: 500; opacity: 0.9;">Pearl • Fender</span></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 3. Bottom 4 Feature Cards -->
+    <section class="bottom-features-box">
+      
+      <!-- Card 1 -->
+      <div class="bottom-card">
+        <div class="card-circle-icon icon-bg-1">🗓️</div>
+        <div class="card-text-wrap">
+          <h4>จองห้องซ้อมออนไลน์</h4>
+          <p>เช็คสถานะห้องว่างสดตลอด 24 ชม. จองง่ายใน 1 นาที ล่วงหน้า 14 วัน</p>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="bottom-card">
+        <div class="card-circle-icon icon-bg-2">🛡️</div>
+        <div class="card-text-wrap">
+          <h4>ป้องกันคิวซ้อน 100%</h4>
+          <p>ระบบตรวจจับเวลาซ้อนทับอัตโนมัติ แม่นยำ ไม่ต้องรอแอดมินอนุมัติ</p>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="bottom-card">
+        <div class="card-circle-icon icon-bg-3">📲</div>
+        <div class="card-text-wrap">
+          <h4>เช็คอินด้วย QR Code</h4>
+          <p>กดเช็คอิน 1 คลิกเมื่อถึงเวลา พร้อมระบบตัดสิทธิ์ No-show 30 นาที</p>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="bottom-card">
+        <div class="card-circle-icon icon-bg-4">🎓</div>
+        <div class="card-text-wrap">
+          <h4>เหมาะสำหรับ วทก.</h4>
+          <p>บริการฟรีสำหรับ นศ. และบุคลากร ใช้งานผ่านมือถือได้ทันที ไม่ต้องโหลดแอป</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 4. Slogan Quote -->
+    <div class="slogan-text">
+      “ เปลี่ยนการจองห้องซ้อมดนตรีที่ยุ่งยาก ให้เป็นระบบที่ง่าย รวดเร็ว และทันสมัย ”
+    </div>
+
+    <!-- 5. Footer Attribution & QR Scan -->
+    <footer class="footer-bar">
+      <div class="footer-left">
+        <div class="footer-logo">
+          <img src="./logo.png" alt="ตรา วทก.">
+        </div>
+        <div>
+          <div class="footer-college-text">วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก (วทก.)</div>
+          <div class="footer-club-text">ชมรมดนตรีสากล • WTK MUSIC STUDIO</div>
+        </div>
+      </div>
+
+      <div class="footer-qr-group">
+        <div class="footer-qr-text">
+          <div class="qr-text-top">📲 สแกนเข้าใช้งานเว็บไซต์</div>
+          <div class="qr-text-url">masterphum07-web.github.io/MUSIC-PI</div>
+        </div>
+        <div class="footer-qr-img">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://masterphum07-web.github.io/MUSIC-PI/&margin=1" alt="QR Code">
+        </div>
+      </div>
+    </footer>
+
+  </main>
+
+</body>
+</html>
