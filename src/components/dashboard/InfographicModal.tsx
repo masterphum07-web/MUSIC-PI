@@ -33,10 +33,10 @@ export const InfographicModal: React.FC<InfographicModalProps> = ({
     >
       <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-1 -mr-1">
         {/* Top 16:9 Real System Infographic Preview */}
-        <div className="relative rounded-2xl overflow-hidden shadow-md border border-slate-200 group bg-slate-900">
+        <div className="relative rounded-2xl overflow-hidden shadow-md border border-slate-700 group bg-slate-950">
           <img
-            src={`${import.meta.env.BASE_URL}wtk_infographic_16_9.png`}
-            alt="ภาพอินโฟกราฟฟิกแนะนำระบบจองห้องซ้อมดนตรี วทก. 16:9"
+            src={`${import.meta.env.BASE_URL}wtk_graphic_16_9.png`}
+            alt="ภาพอินโฟกราฟฟิกแนะนำระบบจองห้องซ้อมดนตรี วทก. กราฟิกโมเดิร์น 16:9"
             className="w-full h-auto aspect-video object-contain group-hover:scale-[1.02] transition-transform duration-300"
           />
         </div>
@@ -45,11 +45,11 @@ export const InfographicModal: React.FC<InfographicModalProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
           <div className="flex items-center gap-2 flex-wrap">
             <a
-              href={`${import.meta.env.BASE_URL}wtk_infographic_16_9_8k.png`}
-              download="WTK-Music-Studio-Infographic-16x9-8K.png"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-xs font-bold text-slate-950 transition-all shadow-xs"
+              href={`${import.meta.env.BASE_URL}wtk_graphic_16_9_8k.png`}
+              download="WTK-Music-Studio-Graphic-16x9-8K.png"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-sky-400 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-xs font-bold text-white transition-all shadow-xs"
             >
-              <Download className="w-3.5 h-3.5 text-slate-950" />
+              <Download className="w-3.5 h-3.5 text-white" />
               <span>ดาวน์โหลด 16:9 (8K Ultra HD)</span>
             </a>
             <Button
@@ -58,8 +58,8 @@ export const InfographicModal: React.FC<InfographicModalProps> = ({
               onClick={handlePrint}
               className="text-xs font-bold shadow-sm"
             >
-              <Printer className="w-4 h-4 mr-1.5 text-slate-700" />
-              <span>เปิดหน้าพิมพ์ A4 (Print / PDF)</span>
+              <Printer className="w-3.5 h-3.5 mr-1 text-slate-700" />
+              <span>พิมพ์ A4 (PDF)</span>
             </Button>
           </div>
 
