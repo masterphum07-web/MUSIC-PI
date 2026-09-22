@@ -1,0 +1,750 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0">
+  <title>WTK Music Studio — 16:9 Infographic (8K Ultra HD)</title>
+  
+  <!-- Google Fonts: Prompt & IBM Plex Sans Thai -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 1920px;
+      height: 1080px;
+      margin: 0;
+      padding: 0;
+      background: #04101A;
+      font-family: 'Prompt', sans-serif;
+      color: #0F172A;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 16:9 Master Canvas */
+    .canvas-16-9 {
+      width: 1920px;
+      height: 1080px;
+      background: linear-gradient(135deg, #071C2E 0%, #0C334E 45%, #0A263D 100%);
+      padding: 24px 34px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    /* Top Decorative Glows */
+    .glow-1 {
+      position: absolute;
+      top: -120px;
+      left: 15%;
+      width: 600px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .glow-2 {
+      position: absolute;
+      top: -120px;
+      right: 10%;
+      width: 600px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(212, 175, 55, 0.22) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* 1. Header Bar */
+    .header-bar {
+      height: 88px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      border: 1.5px solid rgba(255, 255, 255, 0.18);
+      border-radius: 20px;
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      z-index: 10;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-box {
+      width: 62px;
+      height: 62px;
+      background: #FFFFFF;
+      border-radius: 16px;
+      padding: 6px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .brand-text-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #38BDF8;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .brand-text-sub {
+      font-size: 14.5px;
+      font-weight: 500;
+      color: #E2E8F0;
+    }
+
+    .header-center {
+      text-align: center;
+    }
+
+    .main-title {
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1.2;
+      background: linear-gradient(135deg, #FFFFFF 30%, #FDE047 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-badges {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge-gold {
+      background: rgba(212, 175, 55, 0.22);
+      border: 1.5px solid #D4AF37;
+      color: #FDE047;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 6px 16px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-url {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #38BDF8;
+      font-family: monospace;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 16px;
+      border-radius: 999px;
+    }
+
+    /* 2. Main Content Grid (16:9 Split) */
+    .content-grid {
+      height: 928px;
+      display: grid;
+      grid-template-columns: 1010px 814px;
+      gap: 28px;
+      margin-top: 14px;
+      z-index: 5;
+    }
+
+    /* LEFT COLUMN: Showcase & Core Facilities */
+    .left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Live Browser Showcase Card */
+    .browser-card {
+      background: #FFFFFF;
+      border-radius: 22px;
+      padding: 16px 20px 18px 20px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .browser-header-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #F1F5F9;
+      padding: 8px 14px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      border: 1px solid #E2E8F0;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+    }
+    .dot-red { background: #EF4444; }
+    .dot-yellow { background: #F59E0B; }
+    .dot-green { background: #10B981; }
+
+    .browser-address {
+      font-family: monospace;
+      font-size: 12.5px;
+      color: #475569;
+      background: #FFFFFF;
+      padding: 4px 14px;
+      border-radius: 6px;
+      margin-left: 10px;
+      flex-grow: 1;
+      border: 1px solid #CBD5E1;
+    }
+
+    .browser-tag {
+      font-size: 11px;
+      font-weight: 800;
+      background: #0284C7;
+      color: #FFFFFF;
+      padding: 4px 12px;
+      border-radius: 6px;
+    }
+
+    .screenshot-frame {
+      width: 100%;
+      height: 520px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid #CBD5E1;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+      position: relative;
+    }
+
+    .screenshot-frame img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: cover;
+      object-position: top;
+    }
+
+    /* 3 Highlights Under Screenshot */
+    .highlights-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .hl-box {
+      background: #F8FAFC;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 10px 14px;
+    }
+
+    .hl-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0F3D5C;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 2px;
+    }
+
+    .hl-desc {
+      font-size: 11.5px;
+      color: #64748B;
+      line-height: 1.45;
+    }
+
+    /* Left Bottom Row (Hours + Gear) */
+    .left-bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .info-card-left {
+      background: #FFFFFF;
+      border-radius: 20px;
+      padding: 16px 20px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .card-heading-mini {
+      font-size: 15px;
+      font-weight: 800;
+      color: #0F3D5C;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .time-badge-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #F0F9FF;
+      border: 1px solid #BAE6FD;
+      padding: 7px 12px;
+      border-radius: 10px;
+      margin-bottom: 6px;
+      font-size: 12.5px;
+    }
+
+    .time-badge-row strong {
+      color: #0369A1;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .gear-pills-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .gear-mini-chip {
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      color: #78350F;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* RIGHT COLUMN: 3 Steps + Rules + Big QR */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .steps-section-card {
+      background: #FFFFFF;
+      border-radius: 22px;
+      padding: 22px 24px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    .section-head-flex {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .sec-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: #0F3D5C;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sec-pill-time {
+      font-size: 12px;
+      font-weight: 800;
+      background: #DCFCE7;
+      color: #166534;
+      padding: 5px 12px;
+      border-radius: 999px;
+    }
+
+    .step-item-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      background: #F8FAFC;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .step-item-card.active {
+      background: linear-gradient(135deg, #FFFDF5 0%, #FFFBEB 100%);
+      border-color: #D4AF37;
+      box-shadow: 0 4px 16px rgba(212, 175, 55, 0.15);
+    }
+
+    .step-number-bubble {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: #0F3D5C;
+      color: #FFFFFF;
+      font-size: 17px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(15, 61, 92, 0.25);
+    }
+
+    .step-item-card.active .step-number-bubble {
+      background: #D4AF37;
+      color: #1A1300;
+    }
+
+    .step-text-wrap h4 {
+      font-size: 15.5px;
+      font-weight: 800;
+      color: #0F172A;
+      margin-bottom: 3px;
+    }
+
+    .step-text-wrap p {
+      font-size: 12.5px;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    .step-tag-pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 6px;
+      background: rgba(15, 61, 92, 0.08);
+      color: #0F3D5C;
+      margin-top: 5px;
+    }
+
+    /* Rules & Checkin Mini Row */
+    .rules-checkin-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .checkin-card-box {
+      background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+      border: 1.5px solid #A7F3D0;
+      border-radius: 18px;
+      padding: 14px 16px;
+    }
+
+    .checkin-card-box h5 {
+      font-size: 14px;
+      font-weight: 800;
+      color: #065F46;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .checkin-card-box p {
+      font-size: 11.5px;
+      color: #047857;
+      line-height: 1.45;
+    }
+
+    .rules-card-box {
+      background: linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%);
+      border: 1.5px solid #FECDD3;
+      border-radius: 18px;
+      padding: 14px 16px;
+    }
+
+    .rules-card-box h5 {
+      font-size: 14px;
+      font-weight: 800;
+      color: #9F1239;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .rules-card-box p {
+      font-size: 11.5px;
+      color: #881337;
+      line-height: 1.45;
+    }
+
+    /* Large High-Impact QR CTA Box */
+    .qr-cta-banner {
+      background: linear-gradient(135deg, #071C2E 0%, #0F3D5C 100%);
+      border: 2px solid #D4AF37;
+      border-radius: 22px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    .qr-cta-text h3 {
+      font-size: 21px;
+      font-weight: 900;
+      color: #FFFFFF;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .qr-cta-text p {
+      font-size: 12.5px;
+      color: #CBD5E1;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    .url-chip-highlight {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1.5px dashed #D4AF37;
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-family: monospace;
+      font-size: 13px;
+      color: #FDE047;
+      font-weight: 700;
+    }
+
+    .qr-box-main {
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .qr-box-main img {
+      width: 120px;
+      height: 120px;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .qr-box-main span {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #0F3D5C;
+    }
+  </style>
+</head>
+<body>
+
+  <main class="canvas-16-9">
+    
+    <!-- Background Glows -->
+    <div class="glow-1"></div>
+    <div class="glow-2"></div>
+
+    <!-- 1. Header Bar -->
+    <header class="header-bar">
+      <div class="brand-group">
+        <div class="logo-box">
+          <img src="./logo.png" alt="ตราสัญลักษณ์ วทก.">
+        </div>
+        <div>
+          <div class="brand-text-title">ชมรมดนตรีสากล • WTK MUSIC STUDIO</div>
+          <div class="brand-text-sub">วิทยาลัยเทคโนโลยีทางการแพทย์และสาธารณสุข กาญจนาภิเษก (วทก.)</div>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <h1 class="main-title">ระบบจองห้องซ้อมดนตรีออนไลน์ วทก.</h1>
+      </div>
+
+      <div class="header-badges">
+        <div class="badge-gold">
+          <span>✨</span>
+          <span>บริการออนไลน์ 100% ฟรี</span>
+        </div>
+        <div class="badge-url">
+          <span>🌐 masterphum07-web.github.io/MUSIC-PI/</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 2. Main Content Grid (16:9 Landscape) -->
+    <div class="content-grid">
+      
+      <!-- LEFT COLUMN: Real System Browser Showcase + Facilities -->
+      <section class="left-col">
+        
+        <!-- Live Browser Card -->
+        <div class="browser-card">
+          <div class="browser-header-bar">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+            <span class="browser-address">https://masterphum07-web.github.io/MUSIC-PI/</span>
+            <span class="browser-tag">LIVE APP</span>
+          </div>
+
+          <div class="screenshot-frame">
+            <img src="./site_full.png" alt="หน้าจอเว็บไซต์ระบบจองห้องซ้อมดนตรี วทก. ของจริง">
+          </div>
+
+          <div class="highlights-row">
+            <div class="hl-box">
+              <div class="hl-title"><span>🗓️</span> ปฏิทินความว่างสด</div>
+              <p class="hl-desc">เช็คสถานะทันใจ (🟢 ว่าง / 🟡 มีจองบางช่วง / 🔴 เต็ม) ล่วงหน้าได้ 14 วัน</p>
+            </div>
+            <div class="hl-box">
+              <div class="hl-title"><span>⚡</span> จองด่วน 1 คลิก</div>
+              <p class="hl-desc">คลิกเลือกวันที่แล้วกดปุ่ม "⚡ จองห้องซ้อมวันนี้" พร้อมเลือกช่วงเวลาได้ทันที</p>
+            </div>
+            <div class="hl-box">
+              <div class="hl-title"><span>🛡️</span> ป้องกันคิวซ้อน 100%</div>
+              <p class="hl-desc">ระบบตรวจสอบช่วงเวลาทับซ้อนแบบ Real-time บน Google Apps Script Cloud</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Left Bottom: Hours & Gear -->
+        <div class="left-bottom-grid">
+          <!-- Hours -->
+          <div class="info-card-left">
+            <h3 class="card-heading-mini"><span>⏰</span> เวลาเปิดให้บริการห้องซ้อม</h3>
+            <div class="time-badge-row">
+              <span>วันธรรมดา (จันทร์ - ศุกร์)</span>
+              <strong>16:30 - 20:00 น.</strong>
+            </div>
+            <div class="time-badge-row">
+              <span>วันหยุด (เสาร์ - อาทิตย์)</span>
+              <strong>09:00 - 20:00 น.</strong>
+            </div>
+            <div style="font-size: 11.5px; color: #0284C7; font-weight: 700; text-align: right; margin-top: 4px;">
+              * จองใช้งานได้สูงสุดไม่เกิน 3 ชั่วโมง / ครั้ง
+            </div>
+          </div>
+
+          <!-- Gear -->
+          <div class="info-card-left">
+            <h3 class="card-heading-mini"><span>🎸</span> อุปกรณ์และเครื่องดนตรีในห้อง</h3>
+            <div class="gear-pills-wrap">
+              <div class="gear-mini-chip"><span>🥁</span> กลองชุด Pearl</div>
+              <div class="gear-mini-chip"><span>🎸</span> แอมป์กีตาร์ Marshall</div>
+              <div class="gear-mini-chip"><span>🔊</span> แอมป์เบส Fender</div>
+              <div class="gear-mini-chip"><span>🎹</span> คีย์บอร์ด Roland</div>
+              <div class="gear-mini-chip"><span>🎙️</span> ไมค์ Shure x2</div>
+              <div class="gear-mini-chip"><span>🎛️</span> ระบบเสียง PA</div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- RIGHT COLUMN: 3 Steps Guide + Rules + QR Code -->
+      <section class="right-col">
+        
+        <!-- 3 Steps Card -->
+        <div class="steps-section-card">
+          <div class="section-head-flex">
+            <h2 class="sec-title"><span>🚀</span> 3 ขั้นตอนการใช้งาน เข้าใจง่าย</h2>
+            <span class="sec-pill-time">⚡ เสร็จสิ้นใน 1 นาที</span>
+          </div>
+
+          <!-- Step 1 -->
+          <div class="step-item-card">
+            <div class="step-number-bubble">01</div>
+            <div class="step-text-wrap">
+              <h4>1. เลือกวันและช่วงเวลาที่ต้องการซ้อม</h4>
+              <p>เปิดหน้าเว็บ เลือกวันที่ต้องการในปฏิทิน ระบบจะปรับช่วงเวลาเปิด-ปิดให้อัตโนมัติ (จองได้สูงสุด 3 ชม.)</p>
+              <span class="step-tag-pill">เช็คคิวว่างทันใจ 0 ms</span>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="step-item-card active">
+            <div class="step-number-bubble">02</div>
+            <div class="step-text-wrap">
+              <h4>2. กรอกข้อมูลผู้จอง & วัตถุประสงค์</h4>
+              <p>ระบุชื่อ-สกุล, ชั้นปี, สาขาวิชา (วทก.), เบอร์โทร, อีเมล และพิมพ์ระบุเหตุผลในการขอใช้ห้อง</p>
+              <span class="step-tag-pill" style="background: #FEF3C7; color: #92400E;">ระบุอีเมลเพื่อรับบัตรคิว</span>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="step-item-card">
+            <div class="step-number-bubble">03</div>
+            <div class="step-text-wrap">
+              <h4>3. รับรหัสการจอง & QR Code</h4>
+              <p>ระบบออกรหัสจอง (เช่น MB-2609-XXXX) พร้อมบัตรคิวดิจิทัล นำไปใช้เช็คอินเปิดห้องได้ทันที</p>
+              <span class="step-tag-pill">ส่งลิงก์เข้าอีเมลทันที</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rules & Checkin Mini -->
+        <div class="rules-checkin-grid">
+          <div class="checkin-card-box">
+            <h5><span>🟢</span> เช็คอิน & คืนห้อง 1 คลิก</h5>
+            <p>เมื่อถึงเวลากดปุ่ม <strong>"เช็คอิน"</strong> แล้วใส่รหัสจอง และเมื่อซ้อมเสร็จกด <strong>"คืนห้อง"</strong> เพื่อส่งมอบคิว</p>
+            <p style="margin-top: 4px; font-weight: 700; color: #DC2626; font-size: 11px;">⚠️ No-show: เช็คอินภายใน 30 นาที</p>
+          </div>
+
+          <div class="rules-card-box">
+            <h5><span>📋</span> ระเบียบการใช้ห้องซ้อม</h5>
+            <p>• <strong>ห้ามนำอาหาร/เครื่องดื่มเข้าห้อง</strong> (ยกเว้นน้ำเปล่ามีฝาปิด)</p>
+            <p>• <strong>ดูแลเครื่องดนตรี</strong> ปิดสวิตช์แอมป์ แอร์ ไฟ เมื่อใช้งานเสร็จ</p>
+          </div>
+        </div>
+
+        <!-- High-Impact QR CTA Box -->
+        <div class="qr-cta-banner">
+          <div class="qr-cta-text">
+            <h3><span>📲</span> สแกนเข้าเว็บไซต์ทันที</h3>
+            <p>
+              ใช้งานผ่านเว็บเบราว์เซอร์ได้ทันที ไม่ต้องโหลดแอป รองรับสมาร์ทโฟนทุกรุ่น (iOS, Android) และคอมพิวเตอร์ ตลอด 24 ชม.
+            </p>
+            <div class="url-chip-highlight">
+              <span>🌐</span>
+              <span>masterphum07-web.github.io/MUSIC-PI/</span>
+            </div>
+          </div>
+
+          <div class="qr-box-main">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://masterphum07-web.github.io/MUSIC-PI/&margin=2" alt="QR Code สแกนเข้าเว็บ">
+            <span>สแกนจองห้อง</span>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+</body>
+</html>
