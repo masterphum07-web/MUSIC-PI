@@ -5,7 +5,7 @@ import { Input } from '@/components/common/Input';
 import { adminLogin } from '@/lib/api';
 import { AdminUser } from '@/types';
 import { useToast } from '@/components/common/Toast';
-import { Eye, EyeOff, Lock, User, Info } from 'lucide-react';
+import { Eye, EyeOff, Lock, User } from 'lucide-react';
 
 export interface AdminLoginModalProps {
   isOpen: boolean;
@@ -19,7 +19,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
   onSuccess,
 }) => {
   const toast = useToast();
-  const [username, setUsername] = useState('admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -126,16 +126,6 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                   <Eye className="w-4 h-4" />
                 )}
               </button>
-            </div>
-          </div>
-
-          {/* Default credentials hint */}
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-xs flex items-start gap-2">
-            <Info className="w-4 h-4 text-secondary flex-shrink-0 mt-0.5" />
-            <div className="leading-relaxed text-[11px]">
-              <strong>รหัสเริ่มต้นระบบ:</strong><br />
-              ผู้ใช้: <code className="bg-white px-1.5 py-0.5 rounded border text-primary font-bold">admin</code> &nbsp;|&nbsp; 
-              รหัสผ่าน: <code className="bg-white px-1.5 py-0.5 rounded border text-primary font-bold">Admin@WTK2026</code>
             </div>
           </div>
 
